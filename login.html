@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Gestão</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #2193b0, #6dd5ed);
+        }
+
+        .login-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 40px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            border-color: #2193b0;
+            outline: none;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .remember-me input {
+            margin-right: 0.5rem;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            background: #2193b0;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .login-button:hover {
+            background: #1a7a8c;
+        }
+
+        .error-message {
+            color: #ff3333;
+            text-align: center;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .register-link a {
+            color: #2193b0;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            75% {
+                transform: translateX(10px);
+            }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>Login</h1>
+            <p>Digite suas credenciais para acessar</p>
+        </div>
+        <form id="loginForm">
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="email" id="email" placeholder="Email" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder="Senha" required>
+            </div>
+            <div class="remember-me">
+                <input type="checkbox" id="remember">
+                <label for="remember">Lembrar-me</label>
+            </div>
+            <button type="submit" class="login-button">Entrar</button>
+            <div class="error-message" id="errorMessage">
+                Credenciais inválidas. Tente novamente.
+            </div>
+        </form>
+        <div class="register-link">
+            Não tem uma conta? <a href="register.html">Registre-se</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Limpar tokens antigos
+            localStorage.removeItem('authToken');
+            sessionStorage.removeItem('authToken');
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            const errorMessage = document.getElementById('errorMessage');
+
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Armazenar o token
+                    if (remember) {
+                        localStorage.setItem('authToken', data.token);
+                        localStorage.setItem('userName', data.user.name); // Assumindo que a API retorna o nome do usuário
+                    } else {
+                        sessionStorage.setItem('authToken', data.token);
+                        sessionStorage.setItem('userName', data.user.name);
+                    }
+
+                    // Mostrar mensagem de boas-vindas antes do redirecionamento
+                    showWelcomeMessage(data.user.name);
+
+                    // Pequeno delay para a mensagem ser vista antes do redirecionamento
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500); // 1.5 segundos de delay
+
+                } else {
+                    throw new Error('Credenciais inválidas');
+                }
+            } catch (error) {
+                errorMessage.style.display = 'block';
+                document.querySelector('.login-container').classList.add('shake');
+
+                setTimeout(() => {
+                    document.querySelector('.login-container').classList.remove('shake');
+                }, 500);
+            }
+
+        });
+
+        
+function showWelcomeMessage(userName) {
+    // Criar o elemento de mensagem se não existir
+    let messageElement = document.getElementById('welcome-message');
+    if (!messageElement) {
+        messageElement = document.createElement('div');
+        messageElement.id = 'welcome-message';
+        document.body.insertBefore(messageElement, document.body.firstChild);
+    }
+
+    // Aplicar estilos
+    messageElement.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #4CAF50;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 1000;
+        animation: slideDown 0.5s ease-out;
+    `;
+
+    // Adicionar o CSS da animação se ainda não existir
+    if (!document.getElementById('welcome-animation')) {
+        const style = document.createElement('style');
+        style.id = 'welcome-animation';
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    transform: translate(-50%, -100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translate(-50%, 0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Definir a mensagem
+    messageElement.textContent = `Bem vindo, ${userName}!`;
+}
+    </script>
+</body>
+
+</html>
