@@ -13,6 +13,10 @@
 
     <!-- Incluindo o Chart.js aqui, antes do seu script -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- para gerar PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 <body>
@@ -39,13 +43,14 @@
        
            <!-- Main Content -->
            <main>
+          
                <header>
                    <!-- Botão para alternar a sidebar -->
                    <button id="toggleSidebar" class="toggle-btn">
                        <i class="fas fa-bars"></i>
                    </button>
-                   <div id="userName" class="welcome-message">olaa</div>
-                   <h1>Dashboard</h1>
+                   <div id="userName" class="welcome-message">Seja bem vindo</div>
+                   <h3>João 3:16</h3>
                </header>
        
                <!-- Cards -->
@@ -77,9 +82,28 @@
                        <div id="usMap"></div>
                    </div>
                </section>
-       
+          
                <section id="tables">
                    <h2>Tabela de Clientes</h2>
+                   <div class="filter-container">
+                    <input type="text" id="clientSearch" placeholder="Buscar por cliente..." class="filter-input">
+                    <input type="date" id="dateSearch" class="filter-input">
+                    <select id="typeSearch" class="filter-input">
+                        <option value="">Todos os tipos</option>
+                        <option value="gestantes">Gestantes</option>
+                        <option value="familia">Família</option>
+                        <option value="aniversarios">Aniversários</option>
+                        <option value="confirmacoes">Confirmações</option>
+                        <option value="batizados">Batizados</option>
+                        <option value="casal">Casal</option>
+                        <option value="bebes">Bebês</option>
+                        <option value="retratos-corporativos">Retratos Corporativos</option>
+                    </select>
+                    <button id="clearFilters" class="filter-button">Limpar Filtros</button>
+                    <button onclick="generateClientPDF()" class="filter-button">
+                        <i class="fas fa-file-pdf"></i> Gerar Relatório PDF
+                    </button>
+                </div>
                    <div class="table-container">
                        <table class="responsive-table">
                            <thead>
@@ -102,6 +126,14 @@
                </section>
                <section id="tables-expenses">
                    <h2>Tabela de Despesas</h2>
+                   <div class="filter-container">
+                    <input type="text" id="expenseTypeSearch" placeholder="Buscar por tipo de despesa..." class="filter-input">
+                    <input type="date" id="expenseDateSearch" class="filter-input">
+                    <button id="clearExpenseFilters" class="expenses-filter-button">Limpar Filtros</button>
+                    <button onclick="generateExpensePDF()" class="expenses-filter-button">
+                        <i class="fas fa-file-pdf"></i> Gerar Relatório PDF
+                    </button>
+                </div>
                    <div class="expense-table-container">
                        <table class="expense-table">
                            <thead>

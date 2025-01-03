@@ -69,7 +69,7 @@ function updateUserHeader() {
         const userName = localStorage.getItem('userName') || sessionStorage.getItem('userName');
         
         if (userName) {
-            userNameElement.textContent = `Olá, ${userName}`;
+            userNameElement.textContent = `Seja bem vindo, ${userName}`;
         } else {
             // Caso não encontre o nome, redireciona para o login
             window.location.href = 'login.html';
@@ -562,6 +562,108 @@ async function saveClientToAPI(data) {
     }
 }
 
+// Função para filtrar a tabela
+function filterTable() {
+    const clientFilter = document.getElementById('clientSearch').value.toLowerCase();
+    const dateFilter = document.getElementById('dateSearch').value;
+    const typeFilter = document.getElementById('typeSearch').value;
+    
+    const rows = tableBody.getElementsByTagName('tr');
+    
+    Array.from(rows).forEach(row => {
+        const clientName = row.cells[0].textContent.toLowerCase();
+        const date = row.cells[3].textContent;
+        const type = row.cells[4].textContent;
+        
+        const matchesClient = clientName.includes(clientFilter);
+        const matchesDate = !dateFilter || date.includes(dateFilter);
+        const matchesType = !typeFilter || type === typeFilter;
+        
+        row.style.display = matchesClient && matchesDate && matchesType ? '' : 'none';
+    });
+}
+
+// Adicionar listeners para os campos de filtro
+document.addEventListener('DOMContentLoaded', () => {
+    const clientSearch = document.getElementById('clientSearch');
+    const dateSearch = document.getElementById('dateSearch');
+    const typeSearch = document.getElementById('typeSearch');
+    const clearFilters = document.getElementById('clearFilters');
+    
+    // Adicionar eventos para cada campo de filtro
+    clientSearch.addEventListener('input', filterTable);
+    dateSearch.addEventListener('input', filterTable);
+    typeSearch.addEventListener('change', filterTable);
+    
+    // Função para limpar filtros
+    clearFilters.addEventListener('click', () => {
+        clientSearch.value = '';
+        dateSearch.value = '';
+        typeSearch.value = '';
+        filterTable();
+    });
+});
+
+// Função para gerar relatório de clientes
+function generateClientPDF() {
+    // Cria uma nova instância do jsPDF
+    const doc = new jspdf.jsPDF();
+    
+    // Adiciona o título do relatório
+    doc.setFontSize(18);
+    doc.text('Relatório de Clientes', 14, 20);
+    
+    // Adiciona a data do relatório
+    doc.setFontSize(11);
+    doc.text(`Data do relatório: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    // Prepara os dados da tabela
+    const columns = ['Cliente', 'Email', 'Telefone', 'Data', 'Tipo', 'Plano', 'Valor'];
+    const rows = [];
+    
+    // Pega apenas as linhas visíveis (não filtradas)
+    Array.from(tableBody.getElementsByTagName('tr')).forEach(row => {
+        if (row.style.display !== 'none') {
+            rows.push([
+                row.cells[0].textContent, // Cliente
+                row.cells[1].textContent, // Email
+                row.cells[2].textContent, // Telefone
+                row.cells[3].textContent, // Data
+                row.cells[4].textContent, // Tipo
+                row.cells[5].textContent, // Plano
+                row.cells[6].textContent  // Valor
+            ]);
+        }
+    });
+    
+    // Gera a tabela no PDF
+    doc.autoTable({
+        head: [columns],
+        body: rows,
+        startY: 40,
+        styles: {
+            fontSize: 9,
+            cellPadding: 2
+        },
+        headStyles: {
+            fillColor: [66, 66, 66]
+        }
+    });
+    
+    // Adiciona total de clientes e soma dos valores
+    const totalClients = rows.length;
+    const totalValue = rows.reduce((sum, row) => {
+        return sum + parseFloat(row[6].replace('R$ ', '').replace(',', '.'));
+    }, 0);
+    
+    const finalY = doc.previousAutoTable.finalY || 40;
+    doc.text(`Total de Clientes: ${totalClients}`, 14, finalY + 10);
+    doc.text(`Valor Total: R$ ${totalValue.toFixed(2)}`, 14, finalY + 20);
+    
+    // Salva o PDF
+    doc.save('relatorio-clientes.pdf');
+}
+
 // Modal de Despesas
 const expenseModal = document.getElementById("expenseModal");
 const openExpenseModalBtn = document.getElementById("openExpenseModal");
@@ -752,4 +854,93 @@ function clearEditState() {
     isEditing = false;
     editingExpenseId = null;
     expenseForm.reset();
+}
+
+// Função para filtrar a tabela de despesas
+function filterExpenseTable() {
+    const typeFilter = document.getElementById('expenseTypeSearch').value.toLowerCase();
+    const dateFilter = document.getElementById('expenseDateSearch').value;
+    
+    const rows = expenseTableBody.getElementsByTagName('tr');
+    
+    Array.from(rows).forEach(row => {
+        const expenseType = row.cells[0].textContent.toLowerCase();
+        const date = row.cells[1].textContent;
+        
+        const matchesType = expenseType.includes(typeFilter);
+        const matchesDate = !dateFilter || date.includes(dateFilter);
+        
+        row.style.display = matchesType && matchesDate ? '' : 'none';
+    });
+}
+
+// Adicionar listeners para os campos de filtro de despesas
+document.addEventListener('DOMContentLoaded', () => {
+    const expenseTypeSearch = document.getElementById('expenseTypeSearch');
+    const expenseDateSearch = document.getElementById('expenseDateSearch');
+    const clearExpenseFilters = document.getElementById('clearExpenseFilters');
+    
+    // Adicionar eventos para cada campo de filtro
+    expenseTypeSearch.addEventListener('input', filterExpenseTable);
+    expenseDateSearch.addEventListener('input', filterExpenseTable);
+    
+    // Função para limpar filtros
+    clearExpenseFilters.addEventListener('click', () => {
+        expenseTypeSearch.value = '';
+        expenseDateSearch.value = '';
+        filterExpenseTable();
+    });
+});
+
+// Função para gerar relatório de despesas
+function generateExpensePDF() {
+    const doc = new jspdf.jsPDF();
+    
+    // Adiciona o título do relatório
+    doc.setFontSize(18);
+    doc.text('Relatório de Despesas', 14, 20);
+    
+    // Adiciona a data do relatório
+    doc.setFontSize(11);
+    doc.text(`Data do relatório: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    // Prepara os dados da tabela
+    const columns = ['Tipo de Despesa', 'Data', 'Valor'];
+    const rows = [];
+    
+    // Pega apenas as linhas visíveis (não filtradas)
+    Array.from(expenseTableBody.getElementsByTagName('tr')).forEach(row => {
+        if (row.style.display !== 'none') {
+            rows.push([
+                row.cells[0].textContent, // Tipo
+                row.cells[1].textContent, // Data
+                row.cells[2].textContent  // Valor
+            ]);
+        }
+    });
+    
+    // Gera a tabela no PDF
+    doc.autoTable({
+        head: [columns],
+        body: rows,
+        startY: 40,
+        styles: {
+            fontSize: 9,
+            cellPadding: 2
+        },
+        headStyles: {
+            fillColor: [66, 66, 66]
+        }
+    });
+    
+    // Adiciona total de despesas
+    const totalExpenses = rows.reduce((sum, row) => {
+        return sum + parseFloat(row[2].replace('R$ ', '').replace(',', '.'));
+    }, 0);
+    
+    const finalY = doc.previousAutoTable.finalY || 40;
+    doc.text(`Total de Despesas: R$ ${totalExpenses.toFixed(2)}`, 14, finalY + 10);
+    
+    // Salva o PDF
+    doc.save('relatorio-despesas.pdf');
 }
