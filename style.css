@@ -567,47 +567,191 @@ th {
     background-color: #df4d5c;
 }
 
-@media (max-width: 768px) {
-    .responsive-table {
+/* Media Queries para Responsividade */
+
+/* Tablets e telas menores */
+@media screen and (max-width: 1024px) {
+    .charts {
+        flex-direction: column;
+    }
+    
+    .chart, .map {
+        max-width: 100%;
+    }
+    
+    .cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Tablets menores e celulares grandes */
+@media screen and (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+    }
+
+    main {
+        margin-left: 200px;
+        width: calc(100% - 200px);
+    }
+
+    .filter-container {
+        flex-wrap: wrap;
+    }
+
+    .filter-input {
+        min-width: 150px;
+        flex: 1 1 calc(50% - 10px);
+    }
+
+    .cards {
+        gap: 10px;
+    }
+
+    .table-container, .expense-table-container {
+        margin: 10px 0;
+    }
+}
+
+/* Celulares */
+@media screen and (max-width: 576px) {
+    /* Sidebar em modo mobile */
+    .sidebar {
         width: 100%;
-        border: none;
-        border-radius: 10px;
-        overflow: hidden;
+        height: auto;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        z-index: 1000;
+        transform: translateY(100%);
     }
 
-    .responsive-table thead {
-        display: none;
+    .sidebar.hidden {
+        transform: translateY(0);
     }
 
-    .responsive-table tr {
-        display: block;
-        margin-bottom: 10px;
-        border: 1px solid #ddd;
-        border-radius: 10px;
+    main {
+        margin-left: 0;
+        width: 100%;
+        padding: 10px;
     }
 
-    .responsive-table td {
-        display: block;
-        padding-left: 50%;
-        text-align: right;
-        position: relative;
+    /* Ajuste do cabeçalho */
+    header {
+        flex-direction: column;
+        padding: 10px;
     }
 
-    .responsive-table td::before {
-        content: attr(data-label);
+    .welcome-message {
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    /* Cards em coluna única */
+    .cards {
+        grid-template-columns: 1fr;
+    }
+
+    /* Filtros em coluna única */
+    .filter-container {
+        flex-direction: column;
+    }
+
+    .filter-input, 
+    .filter-button, 
+    .expenses-filter-button {
+        width: 100%;
+        margin: 5px 0;
+    }
+
+    /* Modal ajustado */
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+        padding: 15px;
+    }
+
+    /* Tabelas responsivas */
+    .responsive-table, 
+    .expense-table {
+        font-size: 14px;
+    }
+
+    .responsive-table td, 
+    .expense-table td {
+        padding: 8px;
+    }
+
+    /* Ações na tabela */
+    .action-icons, 
+    .expense-action-icons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
+
+    /* Botões da sidebar */
+    .sidebar-btn,
+    .expense-btn,
+    .logout-btn {
+        width: 100%;
+        margin: 5px 0;
+        padding: 12px;
+    }
+}
+
+/* Celulares muito pequenos */
+@media screen and (max-width: 375px) {
+    .card {
+        padding: 15px;
+    }
+
+    .card h3 {
+        font-size: 1.2em;
+    }
+
+    .modal-content {
+        padding: 10px;
+    }
+
+    .modal-content input,
+    .modal-content select {
+        font-size: 12px;
+    }
+
+    .table-container,
+    .expense-table-container {
+        font-size: 12px;
+    }
+}
+
+/* Orientação Paisagem em Dispositivos Móveis */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+    .sidebar {
         position: absolute;
-        left: 10px;
-        font-weight: bold;
+        height: 100%;
+        overflow-y: scroll;
+    }
+
+    .modal-content {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .cards {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
-/* Font Awesome */
-.fas {
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-}
+/* Suporte para Telas de Alta Resolução */
+@media screen and (min-width: 1440px) {
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-/* Smooth Scroll */
-html {
-    scroll-behavior: smooth;
+    .chart,
+    .map {
+        max-width: 800px;
+    }
 }

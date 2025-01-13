@@ -24,7 +24,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // Criar as tabelas "clients" e "expenses" se não existirem
 db.serialize(() => {
-  // Tabela de clientes
+  // Tabela de clientes com os novos campos hasSignal e signalValue
   db.run(`
     CREATE TABLE IF NOT EXISTS clients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,9 +34,34 @@ db.serialize(() => {
       date TEXT,
       type TEXT,
       plan TEXT,
-      value REAL
+      value REAL,
+      hasSignal TEXT DEFAULT 'nao',
+      signalValue REAL DEFAULT 0
     )
-  `);
+  `, (err) => {
+    if (err) {
+      console.error('Erro ao criar/verificar tabela clients:', err);
+    } else {
+      // Verifica se as colunas hasSignal e signalValue existem
+      db.get("PRAGMA table_info(clients)", [], (err, row) => {
+        if (err) {
+          console.error('Erro ao verificar colunas:', err);
+        } else {
+          // Se as colunas não existirem, adiciona-as
+          db.run("ALTER TABLE clients ADD COLUMN hasSignal TEXT DEFAULT 'nao'", (err) => {
+            if (err && !err.message.includes('duplicate')) {
+              console.error('Erro ao adicionar coluna hasSignal:', err);
+            }
+          });
+          db.run("ALTER TABLE clients ADD COLUMN signalValue REAL DEFAULT 0", (err) => {
+            if (err && !err.message.includes('duplicate')) {
+              console.error('Erro ao adicionar coluna signalValue:', err);
+            }
+          });
+        }
+      });
+    }
+  });
 
   // Tabela de despesas
   db.run(`

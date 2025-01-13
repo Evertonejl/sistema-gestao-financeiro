@@ -84,8 +84,8 @@
                </section>
           
                <section id="tables">
-                   <h2>Tabela de Clientes</h2>
-                   <div class="filter-container">
+                <h2>Tabela de Clientes</h2>
+                <div class="filter-container">
                     <input type="text" id="clientSearch" placeholder="Buscar por cliente..." class="filter-input">
                     <input type="date" id="dateSearch" class="filter-input">
                     <select id="typeSearch" class="filter-input">
@@ -99,31 +99,37 @@
                         <option value="bebes">Bebês</option>
                         <option value="retratos-corporativos">Retratos Corporativos</option>
                     </select>
+                    <select id="signalFilter" class="filter-input">
+                        <option value="">Status do Sinal</option>
+                        <option value="sim">Com Sinal</option>
+                        <option value="nao">Sem Sinal</option>
+                    </select>
                     <button id="clearFilters" class="filter-button">Limpar Filtros</button>
                     <button onclick="generateClientPDF()" class="filter-button">
                         <i class="fas fa-file-pdf"></i> Gerar Relatório PDF
                     </button>
                 </div>
-                   <div class="table-container">
-                       <table class="responsive-table">
-                           <thead>
-                               <tr>
-                                   <th>Nome</th>
-                                   <th>E-mail</th>
-                                   <th>Telefone</th>
-                                   <th>Data</th>
-                                   <th>Tipo</th>
-                                   <th>Plano</th>
-                                   <th>Valor</th>
-                                   <th>Ações</th>
-                               </tr>
-                           </thead>
-                           <tbody id="tableBody">
-                               <!-- Os dados serão adicionados dinamicamente aqui -->
-                           </tbody>
-                       </table>
-                   </div>
-               </section>
+                 <div class="table-container">
+                     <table class="responsive-table">
+                         <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Telefone</th>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Plano</th>
+                                <th>Valor</th>
+                                <th>Sinal</th>  <!-- Alterado -->
+                                <th>Ações</th>
+                            </tr>
+                         </thead>
+                         <tbody id="tableBody">
+                             <!-- Os dados serão adicionados dinamicamente aqui -->
+                         </tbody>
+                     </table>
+                 </div>
+             </section>
                <section id="tables-expenses">
                    <h2>Tabela de Despesas</h2>
                    <div class="filter-container">
@@ -154,53 +160,66 @@
        
                <!-- Modal -->
                <div id="modal" class="modal">
-                   <div class="modal-content">
-                       <span class="close">&times;</span>
-                       <h2>Adicionar Dados</h2>
-                       <form id="dataForm">
-                           <!-- Nome -->
-                           <label for="clientName">Nome:</label>
-                           <input type="text" id="clientName" name="clientName" placeholder="Digite o nome" required>
-       
-                           <!-- Email -->
-                           <label for="email">E-mail:</label>
-                           <input type="email" id="email" name="email" placeholder="Digite o e-mail" required>
-       
-                           <!-- Telefone -->
-                           <label for="phone">Telefone:</label>
-                           <input type="tel" id="phone" name="phone" placeholder="(00) 00000-0000" required>
-       
-                           <!-- Data -->
-                           <label for="date">Data:</label>
-                           <input type="date" id="date" name="date" required>
-       
-                           <!-- Tipo de Ensaio -->
-                           <label for="type">Tipo de Ensaio:</label>
-                           <select id="type" name="type" required>
-                               <option value="gestantes">Gestantes</option>
-                               <option value="familia">Família</option>
-                               <option value="aniversarios">Aniversários</option>
-                               <option value="confirmacoes">Confirmações</option>
-                               <option value="batizados">Batizados</option>
-                               <option value="casal">Casal</option>
-                               <option value="bebes">Bebês</option>
-                               <option value="retratos-corporativos">Retratos Corporativos</option>
-                           </select>
-       
-                           <!-- Plano -->
-                           <label for="plan">Plano:</label>
-                           <input type="text" id="plan" name="plan" placeholder="Descreva o plano" required>
-       
-                           <!-- Valor -->
-                           <label for="value">Valor:</label>
-                           <input type="number" id="value" name="value" placeholder="Digite o valor" step="0.01" required>
-       
-                           <!-- Botão Salvar -->
-                           <button type="submit" class="submit-btn">Salvar</button>
-                       </form>
-                   </div>
-               </div>
-       
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>Adicionar Dados</h2>
+                    <form id="dataForm">
+                        <!-- Nome -->
+                        <label for="clientName">Nome:</label>
+                        <input type="text" id="clientName" name="clientName" placeholder="Digite o nome" required>
+            
+                        <!-- Email -->
+                        <label for="email">E-mail:</label>
+                        <input type="email" id="email" name="email" placeholder="Digite o e-mail" required>
+            
+                        <!-- Telefone -->
+                        <label for="phone">Telefone:</label>
+                        <input type="tel" id="phone" name="phone" placeholder="(00) 00000-0000" required>
+            
+                        <!-- Data -->
+                        <label for="date">Data:</label>
+                        <input type="date" id="date" name="date" required>
+            
+                        <!-- Tipo de Ensaio -->
+                        <label for="type">Tipo de Ensaio:</label>
+                        <select id="type" name="type" required>
+                            <option value="gestantes">Gestantes</option>
+                            <option value="familia">Família</option>
+                            <option value="aniversarios">Aniversários</option>
+                            <option value="confirmacoes">Confirmações</option>
+                            <option value="batizados">Batizados</option>
+                            <option value="casal">Casal</option>
+                            <option value="bebes">Bebês</option>
+                            <option value="retratos-corporativos">Retratos Corporativos</option>
+                        </select>
+            
+                        <!-- Plano -->
+                        <label for="plan">Plano:</label>
+                        <input type="text" id="plan" name="plan" placeholder="Descreva o plano" required>
+            
+                        <!-- Valor -->
+                        <label for="value">Valor:</label>
+                        <input type="number" id="value" name="value" placeholder="Digite o valor" step="0.01" required>
+            
+                        <!-- Sinal -->
+                        <div class="form-group">
+                            <label for="hasSignal">Tem Sinal?</label>
+                            <select name="hasSignal" id="hasSignal" required>
+                                <option value="nao">Não</option>
+                                <option value="sim">Sim</option>
+                            </select>
+                        </div>
+            
+                        <div class="form-group" id="signalValueGroup" style="display: none;">
+                            <label for="signalValue">Valor do Sinal</label>
+                            <input type="number" step="0.01" name="signalValue" id="signalValue">
+                        </div>
+            
+                        <!-- Botão Salvar -->
+                        <button type="submit" class="submit-btn">Salvar</button>
+                    </form>
+                </div>
+            </div>
                <!-- Modal de Despesas -->
                <div id="expenseModal" class="modal">
                    <div class="modal-content">
