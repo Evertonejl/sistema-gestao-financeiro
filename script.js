@@ -398,7 +398,7 @@ async function displayTotals() {
             elements.clientCount.textContent = `Total de clientes: ${clients.length}`;
         }
         if (elements.profit) {
-            elements.profit.textContent = `R$ ${profit.toFixed(2)}`;
+            elements.profit.textContent = `Lucro R$ ${profit.toFixed(2)}`;
             elements.profit.className = profit >= 0 ? 'positive' : 'negative';
         }
 
@@ -448,7 +448,7 @@ async function calculateProfit() {
 
         const profitElement = document.getElementById("profit");
         if (profitElement) {
-            profitElement.textContent = `R$ ${profit.toFixed(2)}`;
+            profitElement.textContent = `Lucro R$ ${profit.toFixed(2)}`;
             profitElement.className = profit >= 0 ? 'positive' : 'negative';
         }
 
@@ -1098,3 +1098,122 @@ function generateExpensePDF() {
     // Salva o PDF
     doc.save('relatorio-despesas.pdf');
 }
+
+// Função para gerar relatório combinado
+async function generateCombinedReport() {
+    const doc = new jspdf.jsPDF();
+    
+    // Adiciona título do relatório
+    doc.setFontSize(20);
+    doc.text('Relatório Financeiro', 14, 20);
+    
+    // Adiciona a data do relatório
+    doc.setFontSize(11);
+    doc.text(`Data do relatório: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    // Seção de Clientes
+    doc.setFontSize(14);
+    doc.text('Clientes', 14, 45);
+    
+    // Prepara os dados dos clientes
+    const clientColumns = ['Cliente', 'Data', 'Plano', 'Valor', 'Sinal'];
+    const clientRows = [];
+    
+    Array.from(tableBody.getElementsByTagName('tr')).forEach(row => {
+        if (row.style.display !== 'none') {
+            clientRows.push([
+                row.cells[0].textContent, // Cliente
+                row.cells[3].textContent, // Data
+                row.cells[5].textContent, // Plano
+                row.cells[6].textContent, // Valor
+                row.cells[7].textContent  // Sinal
+            ]);
+        }
+    });
+    
+    // Gera a tabela de clientes
+    doc.autoTable({
+        head: [clientColumns],
+        body: clientRows,
+        startY: 50,
+        styles: {
+            fontSize: 8,
+            cellPadding: 2
+        },
+        headStyles: {
+            fillColor: [66, 66, 66]
+        }
+    });
+    
+    // Calcula totais dos clientes
+    const clientTotal = clientRows.reduce((sum, row) => {
+        const value = parseFloat(row[3].replace('R$ ', '').replace(',', '.'));
+        return sum + (isNaN(value) ? 0 : value);
+    }, 0);
+    
+    const finalYClients = doc.previousAutoTable.finalY;
+    doc.text(`Total de Clientes: ${clientRows.length}`, 14, finalYClients + 10);
+    doc.text(`Valor Total de Serviços: R$ ${clientTotal.toFixed(2)}`, 14, finalYClients + 20);
+    
+    // Seção de Despesas
+    doc.setFontSize(14);
+    doc.text('Despesas', 14, finalYClients + 35);
+    
+    // Prepara os dados das despesas
+    const expenseColumns = ['Tipo de Despesa', 'Data', 'Valor'];
+    const expenseRows = [];
+    
+    Array.from(expenseTableBody.getElementsByTagName('tr')).forEach(row => {
+        if (row.style.display !== 'none') {
+            expenseRows.push([
+                row.cells[0].textContent, // Tipo
+                row.cells[1].textContent, // Data
+                row.cells[2].textContent  // Valor
+            ]);
+        }
+    });
+    
+    // Gera a tabela de despesas
+    doc.autoTable({
+        head: [expenseColumns],
+        body: expenseRows,
+        startY: finalYClients + 40,
+        styles: {
+            fontSize: 8,
+            cellPadding: 2
+        },
+        headStyles: {
+            fillColor: [66, 66, 66]
+        }
+    });
+    
+    // Calcula total de despesas
+    const expenseTotal = expenseRows.reduce((sum, row) => {
+        const value = parseFloat(row[2].replace('R$ ', '').replace(',', '.'));
+        return sum + (isNaN(value) ? 0 : value);
+    }, 0);
+    
+    const finalYExpenses = doc.previousAutoTable.finalY;
+    doc.text(`Total de Despesas: R$ ${expenseTotal.toFixed(2)}`, 14, finalYExpenses + 10);
+    
+    // Resumo Financeiro
+    doc.setFontSize(14);
+    doc.text('Resumo Financeiro', 14, finalYExpenses + 25);
+    
+    const profit = clientTotal - expenseTotal;
+    
+    doc.setFontSize(11);
+    doc.text(`Total de Entradas: R$ ${clientTotal.toFixed(2)}`, 14, finalYExpenses + 35);
+    doc.text(`Total de Saídas: R$ ${expenseTotal.toFixed(2)}`, 14, finalYExpenses + 45);
+    doc.text(`Lucro: R$ ${profit.toFixed(2)}`, 14, finalYExpenses + 55);
+    
+    // Salva o PDF
+    doc.save('relatorio-financeiro.pdf');
+}
+
+// Adicione um botão HTML para chamar a função
+const buttonHtml = `
+    <button onclick="generateCombinedReport()" class="btn btn-primary">
+        <i class="fas fa-file-pdf"></i> Gerar Relatório Completo
+    </button>
+`;
