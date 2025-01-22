@@ -1,193 +1,67 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db/db');
+const { db } = require('../db');
 
 // Listar todos os clientes
-router.get('/', (req, res) => {
-  db.all('SELECT * FROM clients', (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-    } else {
-      res.json(rows);
+router.get('/', async (req, res) => {
+    try {
+        const clients = await db.query(
+            'SELECT * FROM clients ORDER BY date DESC'
+        );
+        res.json(clients.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao buscar clientes' });
     }
-  });
 });
 
-// Criar um novo cliente
-router.post('/', (req, res) => {
-  const { 
-    clientName, 
-    email, 
-    phone, 
-    date, 
-    type, 
-    plan, 
-    value,
-    hasSignal,
-    signalValue 
-  } = req.body;
+// Adicionar novo cliente
+router.post('/', async (req, res) => {
+    try {
+        const {
+            clientName,
+            email,
+            phone,
+            date,
+            type,
+            plan,
+            value,
+            hasSignal,
+            signalValue
+        } = req.body;
 
-  console.log('Dados recebidos no backend:', req.body); // Log para debug
+        const result = await db.query(
+            `INSERT INTO clients 
+            (clientName, email, phone, date, type, plan, value, hasSignal, signalValue) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+            RETURNING *`,
+            [clientName, email, phone, date, type, plan, value, hasSignal, signalValue]
+        );
 
-  if (!clientName || !email || !phone || !date || !type || !plan || !value) {
-    return res.status(400).json({ error: "Todos os campos são obrigatórios." });
-  }
-
-  const query = `
-    INSERT INTO clients (
-      clientName, 
-      email, 
-      phone, 
-      date, 
-      type, 
-      plan, 
-      value, 
-      hasSignal, 
-      signalValue
-    ) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  db.run(
-    query, 
-    [
-      clientName, 
-      email, 
-      phone, 
-      date, 
-      type, 
-      plan, 
-      value,
-      hasSignal || 'nao',
-      signalValue || '0'
-    ], 
-    function (err) {
-      if (err) {
-        console.error('Erro ao inserir cliente:', err);
-        res.status(500).json({ error: err.message });
-      } else {
-        const newClient = {
-          id: this.lastID,
-          clientName,
-          email,
-          phone,
-          date,
-          type,
-          plan,
-          value,
-          hasSignal: hasSignal || 'nao',
-          signalValue: signalValue || '0'
-        };
-        console.log('Cliente criado:', newClient); // Log para debug
-        res.status(201).json(newClient);
-      }
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao criar cliente' });
     }
-  );
 });
 
-// Atualizar um cliente existente
-router.put('/:id', (req, res) => {
-  const { id } = req.params;
-  const { 
-      clientName, 
-      email, 
-      phone, 
-      date, 
-      type, 
-      plan, 
-      value,
-      hasSignal,
-      signalValue 
-  } = req.body;
+// Deletar cliente
+router.delete('/:id', async (req, res) => {
+    try {
+        const result = await db.query(
+            'DELETE FROM clients WHERE id = $1 RETURNING *',
+            [req.params.id]
+        );
 
-  console.log('Dados recebidos na atualização:', req.body);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Cliente não encontrado' });
+        }
 
-  if (!clientName || !email || !phone || !date || !type || !plan || !value) {
-      return res.status(400).json({ error: "Todos os campos são obrigatórios." });
-  }
-
-  const query = `
-      UPDATE clients 
-      SET clientName = ?, 
-          email = ?, 
-          phone = ?, 
-          date = ?, 
-          type = ?, 
-          plan = ?, 
-          value = ?,
-          hasSignal = ?,
-          signalValue = ?
-      WHERE id = ?
-  `;
-
-  try {
-      // Converte os valores para números e garante formato correto
-      const numericValue = parseFloat(value.toString().replace('R$', '').trim());
-      const hasSignalValue = hasSignal || 'nao';
-      const numericSignalValue = hasSignalValue === 'sim' ? 
-          parseFloat(signalValue.toString().replace('R$', '').trim()) || 0 : 0;
-
-      console.log('Valores processados:', {
-          numericValue,
-          hasSignalValue,
-          numericSignalValue
-      });
-
-      db.run(query, [
-          clientName,
-          email,
-          phone,
-          date,
-          type,
-          plan,
-          numericValue,
-          hasSignalValue,
-          numericSignalValue,
-          id
-      ], function(err) {
-          if (err) {
-              console.error('Erro ao atualizar cliente:', err);
-              res.status(500).json({ error: err.message });
-          } else if (this.changes === 0) {
-              res.status(404).json({ error: "Cliente não encontrado." });
-          } else {
-              const updatedClient = {
-                  id,
-                  clientName,
-                  email,
-                  phone,
-                  date,
-                  type,
-                  plan,
-                  value: numericValue,
-                  hasSignal: hasSignalValue,
-                  signalValue: numericSignalValue
-              };
-              console.log('Cliente atualizado:', updatedClient);
-              res.json(updatedClient);
-          }
-      });
-  } catch (error) {
-      console.error('Erro ao processar dados:', error);
-      res.status(500).json({ error: error.message });
-  }
-});
-
-// Deletar um cliente existente (mantém o mesmo)
-router.delete('/:id', (req, res) => {
-  const { id } = req.params;
-
-  const query = `DELETE FROM clients WHERE id = ?`;
-
-  db.run(query, id, function (err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-    } else if (this.changes === 0) {
-      res.status(404).json({ error: "Cliente não encontrado." });
-    } else {
-      res.status(204).send();
+        res.json({ message: 'Cliente deletado com sucesso' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao deletar cliente' });
     }
-  });
 });
 
 module.exports = router;

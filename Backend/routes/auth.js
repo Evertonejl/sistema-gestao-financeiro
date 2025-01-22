@@ -1,58 +1,50 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { get, run } = require('../db/db');
+const { db } = require('../db');
 
-// Rota de registro
 router.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
-
     try {
-        // Verificar se usuário já existe
-        const existingUser = await get('SELECT * FROM users WHERE email = ?', [email]);
+        const { email, password, name } = req.body;
         
-        if (existingUser) {
-            return res.status(400).json({ message: 'Email já cadastrado' });
+        // Verificar se usuário já existe
+        const userExists = await db.get(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
+        );
+        
+        if (userExists) {
+            return res.status(400).json({ message: 'Email já registrado' });
         }
 
-        // Criar hash da senha
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        // Hash da senha
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Inserir novo usuário
-        const result = await run(
-            'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-            [name, email, hashedPassword]
-        );
-
-        const token = jwt.sign(
-            { id: result.lastID, email },
-            'sua_chave_secreta',
-            { expiresIn: '1d' }
+        // Inserir usuário
+        const result = await db.query(
+            'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name',
+            [email, hashedPassword, name]
         );
 
         res.status(201).json({
-            user: {
-                id: result.lastID,
-                name,
-                email
-            },
-            token
+            message: 'Usuário criado com sucesso',
+            user: result.rows[0]
         });
-
-    } catch (error) {
-        console.error('Erro ao registrar usuário:', error);
-        res.status(500).json({ message: 'Erro interno do servidor' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao registrar usuário' });
     }
 });
 
-// Rota de login
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-
     try {
-        const user = await get('SELECT * FROM users WHERE email = ?', [email]);
+        const { email, password } = req.body;
+
+        const user = await db.get(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
+        );
 
         if (!user) {
             return res.status(401).json({ message: 'Credenciais inválidas' });
@@ -64,23 +56,15 @@ router.post('/login', async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: user.id, email: user.email },
-            'sua_chave_secreta',
-            { expiresIn: '1d' }
+            { userId: user.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
         );
 
-        res.json({
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email
-            },
-            token
-        });
-
-    } catch (error) {
-        console.error('Erro ao fazer login:', error);
-        res.status(500).json({ message: 'Erro interno do servidor' });
+        res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao fazer login' });
     }
 });
 
