@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Função para obter a quantidade de clientes cadastrados por mês
     async function getClientsPerMonth() {
         try {
-            const response = await fetchWithAuth('http://localhost:3000/api/clients');
+            const response = await fetchWithAuth('/api/clients');
             if (!response) return Array(6).fill(0);
             
             const clients = await response.json();
@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     async function getExpensesPerMonth() {
         try {
-            const response = await fetchWithAuth('http://localhost:3000/api/expenses');
+            const response = await fetchWithAuth('/api/expenses');
             if (!response) return Array(6).fill(0);
             
             const expenses = await response.json();
@@ -462,7 +462,7 @@ async function calculateProfit() {
 // Função para buscar clientes
 async function fetchClients() {
     try {
-        const response = await fetchWithAuth('http://localhost:3000/api/clients');
+        const response = await fetchWithAuth('/api/clients');
         if (!response) return;
         
         const clients = await response.json();
@@ -534,7 +534,7 @@ async function deleteRow(button) {
     }
 
     try {
-        const response = await fetchWithAuth(`http://localhost:3000/api/clients/${clientId}`, {
+        const response = await fetchWithAuth(`/api/clients/${clientId}`, {
             method: 'DELETE'
         });
 
@@ -616,7 +616,7 @@ window.editRow = async function(button) {
 
             console.log('Dados para atualização:', updatedData);
 
-            const response = await fetchWithAuth(`http://localhost:3000/api/clients/${clientId}`, {
+            const response = await fetchWithAuth(`/api/clients/${clientId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updatedData)
             });
@@ -668,7 +668,7 @@ async function saveClientToAPI(data) {
             signalValue: data.hasSignal === 'sim' ? parseFloat(data.signalValue).toFixed(2) : '0'
         };
 
-        const response = await fetchWithAuth('http://localhost:3000/api/clients', {
+        const response = await fetchWithAuth('/api/clients', {
             method: 'POST',
             body: JSON.stringify(preparedData)
         });
@@ -842,7 +842,7 @@ window.addEventListener("click", (event) => {
 // Função para salvar despesa na API
 async function saveExpenseToAPI(data) {
     try {
-        const response = await fetchWithAuth('http://localhost:3000/api/expenses', {
+        const response = await fetchWithAuth('/api/expenses', {
             method: 'POST',
             body: JSON.stringify(data)
         });
@@ -884,7 +884,7 @@ function addExpenseRowToTable(expense) {
 // Função para buscar todas as despesas
 async function fetchExpenses() {
     try {
-        const response = await fetchWithAuth('http://localhost:3000/api/expenses');
+        const response = await fetchWithAuth('/api/expenses');
         if (!response) return;
         
         const expenses = await response.json();
@@ -909,7 +909,7 @@ async function deleteExpenseRow(button) {
     }
 
     try {
-        const response = await fetchWithAuth(`http://localhost:3000/api/expenses/${expenseId}`, {
+        const response = await fetchWithAuth(`/api/expenses/${expenseId}`, {
             method: 'DELETE'
         });
 
@@ -961,7 +961,7 @@ expenseForm.addEventListener("submit", async (e) => {
 
     try {
         if (isEditing && editingExpenseId) {
-            const response = await fetchWithAuth(`http://localhost:3000/api/expenses/${editingExpenseId}`, {
+            const response = await fetchWithAuth(`/api/expenses/${editingExpenseId}`, {
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
@@ -980,7 +980,7 @@ expenseForm.addEventListener("submit", async (e) => {
                 editingExpenseId = null;
             }
         } else {
-            const response = await fetchWithAuth('http://localhost:3000/api/expenses');
+            const response = await fetchWithAuth('/api/expenses');
             if (!response) return;
 
             const expenses = await response.json();
