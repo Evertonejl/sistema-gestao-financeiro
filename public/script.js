@@ -843,19 +843,26 @@ window.addEventListener("click", (event) => {
 // Função para salvar despesa na API
 async function saveExpenseToAPI(data) {
     try {
-        const response = await fetchWithAuth('/api/expenses', {
+        const response = await fetch('/api/expenses', {
             method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${getAuthToken()}`,
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(data)
         });
 
-        if (!response) return;
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-        const expense = await response.json();
+        const result = await response.json();
         await Promise.all([
             fetchExpenses(),
             calculateProfit(),
             displayTotals()
         ]);
+        
         expenseModal.style.display = "none";
         expenseForm.reset();
     } catch (error) {
