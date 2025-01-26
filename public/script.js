@@ -30,7 +30,7 @@ document.getElementById('logoutBtn').addEventListener('click', logout);
 async function fetchWithAuth(url, options = {}) {
     const token = getAuthToken();
     if (!token) {
-        window.location.href = 'login.html';
+        window.location.href = '/login.html';
         return;
     }
 
@@ -48,13 +48,14 @@ async function fetchWithAuth(url, options = {}) {
             }
         });
 
-        if (response.status === 401) {
-            localStorage.removeItem('authToken');
-            sessionStorage.removeItem('authToken');
-            window.location.href = 'login.html';
-            return;
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            return await response.json();
+        }
         return response;
     } catch (error) {
         console.error('Erro na requisição:', error);
