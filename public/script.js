@@ -843,20 +843,11 @@ window.addEventListener("click", (event) => {
 // Função para salvar despesa na API
 async function saveExpenseToAPI(data) {
     try {
-        const response = await fetch('/api/expenses', {
+        const response = await fetchWithAuth('/api/expenses', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${getAuthToken()}`,
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify(data)
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
         await Promise.all([
             fetchExpenses(),
             calculateProfit(),
@@ -966,50 +957,44 @@ expenseForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(expenseForm);
     const data = Object.fromEntries(formData.entries());
-
+ 
     try {
         if (isEditing && editingExpenseId) {
-            const response = await fetchWithAuth(`/api/expenses/${editingExpenseId}`, {
+            await fetchWithAuth(`/api/expenses/${editingExpenseId}`, {
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
-
-            if (!response) return;
-
-            if (response.ok) {
-                await Promise.all([
-                    fetchExpenses(),
-                    calculateProfit(),
-                    displayTotals()
-                ]);
-                expenseModal.style.display = "none";
-                expenseForm.reset();
-                isEditing = false;
-                editingExpenseId = null;
-            }
+ 
+            await Promise.all([
+                fetchExpenses(),
+                calculateProfit(),
+                displayTotals()
+            ]);
+            expenseModal.style.display = "none";
+            expenseForm.reset();
+            isEditing = false;
+            editingExpenseId = null;
         } else {
-            const response = await fetchWithAuth('/api/expenses');
-            if (!response) return;
-
-            const expenses = await response.json();
+            // Verificar duplicatas
+            const expenses = await fetchWithAuth('/api/expenses');
             const isDuplicate = expenses.some(expense =>
                 expense.expenseType === data.expenseType &&
                 expense.expenseDate === data.expenseDate &&
                 expense.expenseValue === data.expenseValue
             );
-
+ 
             if (isDuplicate) {
                 alert("Esta despesa já foi cadastrada!");
                 return;
             }
-
+ 
             await saveExpenseToAPI(data);
         }
     } catch (error) {
         console.error('Erro:', error);
         alert('Erro ao processar despesa');
     }
-});
+ });
 
 // Função para limpar o estado de edição
 function clearEditState() {
