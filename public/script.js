@@ -170,10 +170,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Função para obter a quantidade de clientes cadastrados por mês
     async function getClientsPerMonth() {
         try {
-            const response = await fetchWithAuth('/api/clients');
-            if (!response) return Array(6).fill(0);
-            
-            const clients = await response.json();
+            const clients = await fetchWithAuth('/api/clients');
             const months = Array(12).fill(0);
             
             clients.forEach(client => {
@@ -192,25 +189,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     async function getExpensesPerMonth() {
         try {
-            const response = await fetchWithAuth('/api/expenses');
-            if (!response) return Array(6).fill(0);
-            
-            const expenses = await response.json();
+            const expenses = await fetchWithAuth('/api/expenses');
             const months = Array(12).fill(0);
             
             expenses.forEach(expense => {
-                const date = new Date(expense.expenseDate); // Mudou de date para expenseDate
+                const date = new Date(expense.expenseDate);
                 if (!isNaN(date)) {
                     const monthIndex = date.getMonth();
-                    // Mudou de value para expenseValue
                     const value = parseFloat(expense.expenseValue) || 0;
                     months[monthIndex] += value;
                 }
             });
-    
-            // Para debug
-            console.log('Valores mensais de despesas:', months.slice(0, 6));
-            
             return months.slice(0, 6);
         } catch (error) {
             console.error('Erro ao obter dados das despesas:', error);
