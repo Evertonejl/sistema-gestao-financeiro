@@ -167,45 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // Função para obter a quantidade de clientes cadastrados por mês
-    async function getClientsPerMonth() {
-        try {
-            const clients = await fetchWithAuth('/api/clients');
-            const months = Array(12).fill(0);
-            
-            clients.forEach(client => {
-                const date = new Date(client.date);
-                if (!isNaN(date)) {
-                    const monthIndex = date.getMonth();
-                    months[monthIndex]++;
-                }
-            });
-            return months.slice(0, 6);
-        } catch (error) {
-            console.error('Erro ao obter dados dos clientes:', error);
-            return Array(6).fill(0);
-        }
-    }
-    
-    async function getExpensesPerMonth() {
-        try {
-            const expenses = await fetchWithAuth('/api/expenses');
-            const months = Array(12).fill(0);
-            
-            expenses.forEach(expense => {
-                const date = new Date(expense.expenseDate);
-                if (!isNaN(date)) {
-                    const monthIndex = date.getMonth();
-                    const value = parseFloat(expense.expenseValue) || 0;
-                    months[monthIndex] += value;
-                }
-            });
-            return months.slice(0, 6);
-        } catch (error) {
-            console.error('Erro ao obter dados das despesas:', error);
-            return Array(6).fill(0);
-        }
-    }
+   
     
     // Chart.js - Configuração do gráfico
     try {
@@ -337,6 +299,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.target.value = value;
     });
 });
+
+ // Função para obter a quantidade de clientes cadastrados por mês
+ async function getClientsPerMonth() {
+    try {
+        const clients = await fetchWithAuth('/api/clients');
+        const months = Array(12).fill(0);
+        
+        clients.forEach(client => {
+            const date = new Date(client.date);
+            if (!isNaN(date)) {
+                const monthIndex = date.getMonth();
+                months[monthIndex]++;
+            }
+        });
+        return months.slice(0, 6);
+    } catch (error) {
+        console.error('Erro ao obter dados dos clientes:', error);
+        return Array(6).fill(0);
+    }
+}
+
+async function getExpensesPerMonth() {
+    try {
+        const expenses = await fetchWithAuth('/api/expenses');
+        const months = Array(12).fill(0);
+        
+        expenses.forEach(expense => {
+            const date = new Date(expense.expenseDate);
+            if (!isNaN(date)) {
+                const monthIndex = date.getMonth();
+                const value = parseFloat(expense.expenseValue) || 0;
+                months[monthIndex] += value;
+            }
+        });
+        return months.slice(0, 6);
+    } catch (error) {
+        console.error('Erro ao obter dados das despesas:', error);
+        return Array(6).fill(0);
+    }
+}
 
 // Funções relacionadas à tabela e API
 const tableBody = document.getElementById("tableBody");
