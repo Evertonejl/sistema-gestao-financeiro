@@ -33,7 +33,6 @@ async function fetchWithAuth(url, options = {}) {
         console.log('Token encontrado:', token ? 'Sim' : 'Não');
 
         if (!token) {
-            console.log('Redirecionando para login por falta de token');
             window.location.href = '/login.html';
             return;
         }
@@ -41,9 +40,9 @@ async function fetchWithAuth(url, options = {}) {
         // URL base do seu backend
         const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app';
         
-        // Limpeza e construção da URL - CORREÇÃO AQUI
-        const cleanUrl = url.replace(/:[0-9]+$/, ''); // Remove qualquer :número do final
-        const fullUrl = `${baseURL}/api/${cleanUrl.replace(/^api\//, '')}`;
+        // Remova /api/ da URL se já estiver presente
+        const cleanUrl = url.replace(/^\/?(api\/)?/, '');
+        const fullUrl = `${baseURL}/api/${cleanUrl}`;
         
         console.log('Iniciando requisição para:', fullUrl);
 
@@ -56,22 +55,24 @@ async function fetchWithAuth(url, options = {}) {
             }
         });
 
-        // Log detalhado da resposta
-        console.log('Resposta recebida:', {
-            url: fullUrl,
-            status: response.status,
-            statusText: response.statusText
-        });
-
         if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Erro na resposta:', {
+                url: fullUrl,
+                status: response.status,
+                statusText: response.statusText,
+                error: errorData
+            });
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('Dados recebidos:', data);
         return data;
     } catch (error) {
-        console.error('Erro na requisição:', error);
+        console.error('Erro detalhado na requisição:', {
+            message: error.message,
+            url: url
+        });
         throw error;
     }
 }
@@ -94,7 +95,7 @@ function updateUserHeader() {
  // Função para obter a quantidade de clientes cadastrados por mês
  async function getClientsPerMonth() {
     try {
-        const clients = await fetchWithAuth('api/clients');
+        const clients = await fetchWithAuth('clients');
         const months = Array(12).fill(0);
         
         clients.forEach(client => {
@@ -113,7 +114,7 @@ function updateUserHeader() {
 
 async function getExpensesPerMonth() {
     try {
-        const expenses = await fetchWithAuth('api/expenses');
+        const expenses = await fetchWithAuth('expenses');
         const months = Array(12).fill(0);
         
         expenses.forEach(expense => {
@@ -135,12 +136,12 @@ async function testarConexao() {
     try {
         // Teste de clientes
         console.log('Testando rota de clientes...');
-        const clientes = await fetchWithAuth('api/clients');
+        const clientes = await fetchWithAuth('clients');
         console.log('Clientes recebidos:', clientes);
 
         // Teste de despesas
         console.log('Testando rota de despesas...');
-        const despesas = await fetchWithAuth('api/expenses');
+        const despesas = await fetchWithAuth('expenses');
         console.log('Despesas recebidas:', despesas);
     } catch (error) {
         console.error('Erro no teste de conexão:', error);
@@ -379,8 +380,8 @@ const expenseTableBody = document.getElementById("expenseTableBody");
 // Função para calcular e exibir totais
 async function displayTotals() {
     try {
-        const clients = await fetchWithAuth('api/clients');
-        const expenses = await fetchWithAuth('api/expenses');
+        const clients = await fetchWithAuth('clients');
+        const expenses = await fetchWithAuth('expenses');
  
         // Calcula o total de receitas
         const totalRevenue = clients.reduce((acc, client) => {
@@ -436,8 +437,8 @@ async function displayTotals() {
 // Função para calcular lucro
 async function calculateProfit() {
     try {
-        const clients = await fetchWithAuth('api/clients');
-        const expenses = await fetchWithAuth('api/expenses');
+        const clients = await fetchWithAuth('clients');
+        const expenses = await fetchWithAuth('expenses');
  
         const totalRevenue = clients.reduce((acc, client) => {
             const mainValue = parseFloat(client.value) || 0;
@@ -467,15 +468,16 @@ async function calculateProfit() {
 async function fetchClients() {
     try {
         console.log('Buscando clientes...');
-        const clients = await fetchWithAuth('api/clients'); // remova qualquer :1 ou número
+        const clients = await fetchWithAuth('clients'); // remova qualquer :1 ou número
         
         if (Array.isArray(clients)) {
+            console.error('Resposta inválida:', clients);
             tableBody.innerHTML = '';
             clients.forEach(client => addRowToTable(client));
             document.getElementById('clientCount').textContent = `Total de clientes: ${clients.length}`;
         }
     } catch (error) {
-        console.error('Erro ao buscar clientes:', error);
+        console.error('Erro detalhado ao buscar clientes:', error);
     }
 }
 
@@ -528,7 +530,7 @@ async function deleteRow(button) {
     const clientId = row.dataset.id;
 
     try {
-        await fetchWithAuth(`api/clients/${clientId}`, {
+        await fetchWithAuth(`clients/${clientId}`, {
             method: 'DELETE'
         });
         row.remove();
@@ -602,7 +604,7 @@ window.editRow = async function(button) {
  
             console.log('Dados para atualização:', updatedData);
  
-            await fetchWithAuth(`api/clients/${clientId}`, {
+            await fetchWithAuth(`clients/${clientId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updatedData)
             });
@@ -646,7 +648,7 @@ async function saveClientToAPI(data) {
             signalValue: data.hasSignal === 'sim' ? parseFloat(data.signalValue).toFixed(2) : '0'
         };
 
-        const response = await fetchWithAuth('api/clients', {
+        const response = await fetchWithAuth('clients', {
             method: 'POST',
             body: JSON.stringify(preparedData)
         });
@@ -820,7 +822,7 @@ window.addEventListener("click", (event) => {
 // Função para salvar despesa na API
 async function saveExpenseToAPI(data) {
     try {
-        const response = await fetchWithAuth('api/expenses', {
+        const response = await fetchWithAuth('expenses', {
             method: 'POST',
             body: JSON.stringify(data)
         });
@@ -861,7 +863,7 @@ function addExpenseRowToTable(expense) {
 async function fetchExpenses() {
     try {
         console.log('Buscando despesas...');
-        const expenses = await fetchWithAuth('api/expenses'); // remova qualquer :1 ou número
+        const expenses = await fetchWithAuth('expenses'); // remova qualquer :1 ou número
         
         if (Array.isArray(expenses)) {
             expenseTableBody.innerHTML = '';
@@ -884,7 +886,7 @@ async function deleteExpenseRow(button) {
     }
 
     try {
-        const response = await fetchWithAuth(`api/expenses/${expenseId}`, {
+        const response = await fetchWithAuth(`expenses/${expenseId}`, {
             method: 'DELETE'
         });
 
@@ -936,7 +938,7 @@ expenseForm.addEventListener("submit", async (e) => {
  
     try {
         if (isEditing && editingExpenseId) {
-            await fetchWithAuth(`api/expenses/${editingExpenseId}`, {
+            await fetchWithAuth(`expenses/${editingExpenseId}`, {
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
@@ -952,7 +954,7 @@ expenseForm.addEventListener("submit", async (e) => {
             editingExpenseId = null;
         } else {
             // Verificar duplicatas
-            const expenses = await fetchWithAuth('api/expenses');
+            const expenses = await fetchWithAuth('expenses');
             const isDuplicate = expenses.some(expense =>
                 expense.expenseType === data.expenseType &&
                 expense.expenseDate === data.expenseDate &&
