@@ -379,8 +379,8 @@ const expenseTableBody = document.getElementById("expenseTableBody");
 // Função para calcular e exibir totais
 async function displayTotals() {
     try {
-        const clients = await fetchWithAuth('/api/clients');
-        const expenses = await fetchWithAuth('/api/expenses');
+        const clients = await fetchWithAuth('api/clients');
+        const expenses = await fetchWithAuth('api/expenses');
  
         // Calcula o total de receitas
         const totalRevenue = clients.reduce((acc, client) => {
@@ -436,8 +436,8 @@ async function displayTotals() {
 // Função para calcular lucro
 async function calculateProfit() {
     try {
-        const clients = await fetchWithAuth('/api/clients');
-        const expenses = await fetchWithAuth('/api/expenses');
+        const clients = await fetchWithAuth('api/clients');
+        const expenses = await fetchWithAuth('api/expenses');
  
         const totalRevenue = clients.reduce((acc, client) => {
             const mainValue = parseFloat(client.value) || 0;
@@ -466,21 +466,16 @@ async function calculateProfit() {
 // Função para buscar clientes
 async function fetchClients() {
     try {
-        console.log('Iniciando busca de clientes');
-        const clients = await fetchWithAuth('/api/clients');
-        console.log('Clientes recebidos:', clients);
+        console.log('Buscando clientes...');
+        const clients = await fetchWithAuth('api/clients'); // remova qualquer :1 ou número
         
-        if (!Array.isArray(clients)) {
-            console.error('Resposta não é um array:', clients);
-            return;
+        if (Array.isArray(clients)) {
+            tableBody.innerHTML = '';
+            clients.forEach(client => addRowToTable(client));
+            document.getElementById('clientCount').textContent = `Total de clientes: ${clients.length}`;
         }
-
-        tableBody.innerHTML = '';
-        clients.forEach(client => addRowToTable(client));
-        document.getElementById('clientCount').textContent = `Total de clientes: ${clients.length}`;
     } catch (error) {
-        console.error('Erro detalhado ao buscar clientes:', error);
-        alert('Erro ao buscar clientes. Por favor, tente novamente.');
+        console.error('Erro ao buscar clientes:', error);
     }
 }
 
@@ -533,7 +528,7 @@ async function deleteRow(button) {
     const clientId = row.dataset.id;
 
     try {
-        await fetchWithAuth(`/api/clients/${clientId}`, {
+        await fetchWithAuth(`api/clients/${clientId}`, {
             method: 'DELETE'
         });
         row.remove();
@@ -607,7 +602,7 @@ window.editRow = async function(button) {
  
             console.log('Dados para atualização:', updatedData);
  
-            await fetchWithAuth(`/api/clients/${clientId}`, {
+            await fetchWithAuth(`api/clients/${clientId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updatedData)
             });
@@ -651,7 +646,7 @@ async function saveClientToAPI(data) {
             signalValue: data.hasSignal === 'sim' ? parseFloat(data.signalValue).toFixed(2) : '0'
         };
 
-        const response = await fetchWithAuth('/api/clients', {
+        const response = await fetchWithAuth('api/clients', {
             method: 'POST',
             body: JSON.stringify(preparedData)
         });
@@ -825,7 +820,7 @@ window.addEventListener("click", (event) => {
 // Função para salvar despesa na API
 async function saveExpenseToAPI(data) {
     try {
-        const response = await fetchWithAuth('/api/expenses', {
+        const response = await fetchWithAuth('api/expenses', {
             method: 'POST',
             body: JSON.stringify(data)
         });
@@ -865,20 +860,15 @@ function addExpenseRowToTable(expense) {
 // Função para buscar todas as despesas
 async function fetchExpenses() {
     try {
-        console.log('Iniciando busca de despesas');
-        const expenses = await fetchWithAuth('/api/expenses');
-        console.log('Despesas recebidas:', expenses);
-
-        if (!Array.isArray(expenses)) {
-            console.error('Resposta não é um array:', expenses);
-            return;
+        console.log('Buscando despesas...');
+        const expenses = await fetchWithAuth('api/expenses'); // remova qualquer :1 ou número
+        
+        if (Array.isArray(expenses)) {
+            expenseTableBody.innerHTML = '';
+            expenses.forEach(expense => addExpenseRowToTable(expense));
         }
-
-        expenseTableBody.innerHTML = '';
-        expenses.forEach(expense => addExpenseRowToTable(expense));
     } catch (error) {
-        console.error('Erro detalhado ao buscar despesas:', error);
-        alert('Erro ao buscar despesas. Por favor, tente novamente.');
+        console.error('Erro ao buscar despesas:', error);
     }
 }
 
@@ -894,7 +884,7 @@ async function deleteExpenseRow(button) {
     }
 
     try {
-        const response = await fetchWithAuth(`/api/expenses/${expenseId}`, {
+        const response = await fetchWithAuth(`api/expenses/${expenseId}`, {
             method: 'DELETE'
         });
 
@@ -946,7 +936,7 @@ expenseForm.addEventListener("submit", async (e) => {
  
     try {
         if (isEditing && editingExpenseId) {
-            await fetchWithAuth(`/api/expenses/${editingExpenseId}`, {
+            await fetchWithAuth(`api/expenses/${editingExpenseId}`, {
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
@@ -962,7 +952,7 @@ expenseForm.addEventListener("submit", async (e) => {
             editingExpenseId = null;
         } else {
             // Verificar duplicatas
-            const expenses = await fetchWithAuth('/api/expenses');
+            const expenses = await fetchWithAuth('api/expenses');
             const isDuplicate = expenses.some(expense =>
                 expense.expenseType === data.expenseType &&
                 expense.expenseDate === data.expenseDate &&
