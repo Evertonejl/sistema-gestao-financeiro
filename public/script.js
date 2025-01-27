@@ -78,7 +78,45 @@ function updateUserHeader() {
     }
 }
 
+ // Função para obter a quantidade de clientes cadastrados por mês
+ async function getClientsPerMonth() {
+    try {
+        const clients = await fetchWithAuth('/api/clients');
+        const months = Array(12).fill(0);
+        
+        clients.forEach(client => {
+            const date = new Date(client.date);
+            if (!isNaN(date)) {
+                const monthIndex = date.getMonth();
+                months[monthIndex]++;
+            }
+        });
+        return months.slice(0, 6);
+    } catch (error) {
+        console.error('Erro ao obter dados dos clientes:', error);
+        return Array(6).fill(0);
+    }
+}
 
+async function getExpensesPerMonth() {
+    try {
+        const expenses = await fetchWithAuth('/api/expenses');
+        const months = Array(12).fill(0);
+        
+        expenses.forEach(expense => {
+            const date = new Date(expense.expenseDate);
+            if (!isNaN(date)) {
+                const monthIndex = date.getMonth();
+                const value = parseFloat(expense.expenseValue) || 0;
+                months[monthIndex] += value;
+            }
+        });
+        return months.slice(0, 6);
+    } catch (error) {
+        console.error('Erro ao obter dados das despesas:', error);
+        return Array(6).fill(0);
+    }
+}
 
 
 // Adicione a verificação quando a página carregar
@@ -300,45 +338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
- // Função para obter a quantidade de clientes cadastrados por mês
- async function getClientsPerMonth() {
-    try {
-        const clients = await fetchWithAuth('/api/clients');
-        const months = Array(12).fill(0);
-        
-        clients.forEach(client => {
-            const date = new Date(client.date);
-            if (!isNaN(date)) {
-                const monthIndex = date.getMonth();
-                months[monthIndex]++;
-            }
-        });
-        return months.slice(0, 6);
-    } catch (error) {
-        console.error('Erro ao obter dados dos clientes:', error);
-        return Array(6).fill(0);
-    }
-}
 
-async function getExpensesPerMonth() {
-    try {
-        const expenses = await fetchWithAuth('/api/expenses');
-        const months = Array(12).fill(0);
-        
-        expenses.forEach(expense => {
-            const date = new Date(expense.expenseDate);
-            if (!isNaN(date)) {
-                const monthIndex = date.getMonth();
-                const value = parseFloat(expense.expenseValue) || 0;
-                months[monthIndex] += value;
-            }
-        });
-        return months.slice(0, 6);
-    } catch (error) {
-        console.error('Erro ao obter dados das despesas:', error);
-        return Array(6).fill(0);
-    }
-}
 
 // Funções relacionadas à tabela e API
 const tableBody = document.getElementById("tableBody");
@@ -434,14 +434,8 @@ async function calculateProfit() {
 // Função para buscar clientes
 async function fetchClients() {
     try {
-        const response = await fetchWithAuth('/api/clients');
-        if (!response) return;
-        
-        const clients = await response.json();
-        
-        // Limpa a tabela antes de adicionar os novos dados
+        const clients = await fetchWithAuth('/api/clients');
         tableBody.innerHTML = '';
-
         if (Array.isArray(clients)) {
             clients.forEach(client => addRowToTable(client));
             document.getElementById('clientCount').textContent = `Total de clientes: ${clients.length}`;
@@ -500,26 +494,16 @@ async function deleteRow(button) {
     const row = button.closest("tr");
     const clientId = row.dataset.id;
 
-    if (!clientId) {
-        console.error('ID do cliente não encontrado');
-        return;
-    }
-
     try {
-        const response = await fetchWithAuth(`/api/clients/${clientId}`, {
+        await fetchWithAuth(`/api/clients/${clientId}`, {
             method: 'DELETE'
         });
-
-        if (!response) return;
-
-        if (response.ok) {
-            row.remove();
-            // Primeiro limpa a tabela e recarrega todos os dados
-            await fetchClients();
-            // Depois recalcula os totais
-            await displayTotals();
-            await calculateProfit();
-        }
+        row.remove();
+        await Promise.all([
+            fetchClients(),
+            displayTotals(),
+            calculateProfit()
+        ]);
     } catch (error) {
         console.error('Erro ao deletar cliente:', error);
         alert('Erro ao deletar cliente');
@@ -533,9 +517,9 @@ window.editRow = async function(button) {
     const row = button.closest("tr");
     const clientId = row.dataset.id;
     const cells = row.querySelectorAll("td");
-
+ 
     console.log('Iniciando edição do cliente ID:', clientId);
-
+ 
     // Preenche o formulário com os dados atuais
     document.getElementById("clientName").value = cells[0].textContent;
     document.getElementById("email").value = cells[1].textContent;
@@ -561,19 +545,16 @@ window.editRow = async function(button) {
         signalValueGroup.style.display = 'none';
         document.getElementById("signalValue").value = '0';
     }
-
+ 
     const modal = document.getElementById("modal");
     modal.style.display = "block";
-
+ 
     // Função para lidar com a submissão do formulário de edição
     const dataForm = document.getElementById("dataForm");
     dataForm.onsubmit = async (e) => {
         e.preventDefault();
-
+ 
         try {
-            // Limpa a tabela antes da atualização
-            tableBody.innerHTML = '';
-
             const formData = new FormData(dataForm);
             const data = Object.fromEntries(formData.entries());
             
@@ -585,39 +566,31 @@ window.editRow = async function(button) {
                     document.getElementById("signalValue").value : '0',
                 value: data.value.toString().replace(',', '.')
             };
-
+ 
             console.log('Dados para atualização:', updatedData);
-
-            const response = await fetchWithAuth(`/api/clients/${clientId}`, {
+ 
+            await fetchWithAuth(`/api/clients/${clientId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updatedData)
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Erro na atualização');
-            }
-
-            const updatedClient = await response.json();
-            console.log('Resposta da API:', updatedClient);
-
+ 
             // Fecha o modal e limpa o formulário
             modal.style.display = "none";
             dataForm.reset();
-
+ 
             // Atualiza os dados
             await Promise.all([
                 fetchClients(),
                 displayTotals(),
                 calculateProfit()
             ]);
-
+ 
         } catch (error) {
-            console.error('Erro detalhado:', error);
-            alert(error.message || 'Erro ao atualizar cliente');
+            console.error('Erro ao atualizar cliente:', error);
+            alert('Erro ao atualizar cliente');
         }
     };
-};
+ };
 
 
 
