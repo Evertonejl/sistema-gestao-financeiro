@@ -28,22 +28,26 @@ document.getElementById('logoutBtn').addEventListener('click', logout);
 
 // Função genérica para fazer requisições autenticadas
 async function fetchWithAuth(url, options = {}) {
-    const token = getAuthToken();
-    if (!token) {
-        window.location.href = '/login.html';
-        return;
-    }
-
-    const defaultHeaders = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    };
-
     try {
-        const response = await fetch(url, {
+        const token = getAuthToken();
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        // Ajuste na URL base
+        const baseURL = window.location.hostname.includes('localhost') 
+            ? 'http://localhost:3000'
+            : 'https://sistema-gestao-financeiro-production.up.railway.app'; // Ajuste para sua URL do Railway
+
+        const fullUrl = `${baseURL}${url}`;
+        console.log('Fazendo requisição para:', fullUrl);
+
+        const response = await fetch(fullUrl, {
             ...options,
             headers: {
-                ...defaultHeaders,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
                 ...options.headers
             }
         });
@@ -52,13 +56,9 @@ async function fetchWithAuth(url, options = {}) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            return await response.json();
-        }
-        return response;
+        return await response.json();
     } catch (error) {
-        console.error('Erro na requisição:', error);
+        console.error('Erro detalhado:', error);
         throw error;
     }
 }
@@ -434,17 +434,23 @@ async function calculateProfit() {
 // Função para buscar clientes
 async function fetchClients() {
     try {
+        console.log('Iniciando busca de clientes');
         const clients = await fetchWithAuth('/api/clients');
-        tableBody.innerHTML = '';
-        if (Array.isArray(clients)) {
-            clients.forEach(client => addRowToTable(client));
-            document.getElementById('clientCount').textContent = `Total de clientes: ${clients.length}`;
+        console.log('Clientes recebidos:', clients);
+        
+        if (!Array.isArray(clients)) {
+            console.error('Resposta não é um array:', clients);
+            return;
         }
+
+        tableBody.innerHTML = '';
+        clients.forEach(client => addRowToTable(client));
+        document.getElementById('clientCount').textContent = `Total de clientes: ${clients.length}`;
     } catch (error) {
-        console.error('Erro ao buscar clientes:', error);
+        console.error('Erro detalhado ao buscar clientes:', error);
+        alert('Erro ao buscar clientes. Por favor, tente novamente.');
     }
 }
-
 
 
 // Função para adicionar linha à tabela de clientes
@@ -827,13 +833,20 @@ function addExpenseRowToTable(expense) {
 // Função para buscar todas as despesas
 async function fetchExpenses() {
     try {
+        console.log('Iniciando busca de despesas');
         const expenses = await fetchWithAuth('/api/expenses');
-        expenseTableBody.innerHTML = '';
-        if (Array.isArray(expenses)) {
-            expenses.forEach(expense => addExpenseRowToTable(expense));
+        console.log('Despesas recebidas:', expenses);
+
+        if (!Array.isArray(expenses)) {
+            console.error('Resposta não é um array:', expenses);
+            return;
         }
+
+        expenseTableBody.innerHTML = '';
+        expenses.forEach(expense => addExpenseRowToTable(expense));
     } catch (error) {
-        console.error('Erro ao buscar despesas:', error);
+        console.error('Erro detalhado ao buscar despesas:', error);
+        alert('Erro ao buscar despesas. Por favor, tente novamente.');
     }
 }
 
