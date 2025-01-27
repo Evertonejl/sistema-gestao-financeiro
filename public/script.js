@@ -29,36 +29,101 @@ document.getElementById('logoutBtn').addEventListener('click', logout);
 // Função genérica para fazer requisições autenticadas
 async function fetchWithAuth(url, options = {}) {
     try {
+        // Verificação e log do token
         const token = getAuthToken();
+        console.log('Token encontrado:', token ? 'Sim' : 'Não');
+
         if (!token) {
+            console.log('Redirecionando para login por falta de token');
             window.location.href = '/login.html';
             return;
         }
 
-        // Ajuste na URL base
-        const baseURL = window.location.hostname.includes('localhost') 
-            ? 'http://localhost:3000'
-            : 'https://sistema-gestao-financeiro-production.up.railway.app'; // Ajuste para sua URL do Railway
+        // URL base do seu backend
+        const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app';
+        
+        // Limpeza e construção da URL
+        const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
+        const fullUrl = `${baseURL}/${cleanUrl}`;
+        
+        console.log('Iniciando requisição para:', fullUrl);
+        console.log('Método:', options.method || 'GET');
 
-        const fullUrl = `${baseURL}${url}`;
-        console.log('Fazendo requisição para:', fullUrl);
-
-        const response = await fetch(fullUrl, {
+        // Configuração da requisição
+        const requestConfig = {
             ...options,
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
                 ...options.headers
             }
+        };
+
+        // Remove credentials se não for necessário
+        if (!url.includes('/auth')) {
+            delete requestConfig.credentials;
+        }
+
+        // Faz a requisição e monitora a resposta
+        const response = await fetch(fullUrl, requestConfig);
+
+        // Log detalhado da resposta
+        console.log('Resposta recebida:', {
+            url: fullUrl,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries())
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Tenta obter mais detalhes do erro
+            let errorDetail = '';
+            try {
+                const errorResponse = await response.json();
+                errorDetail = errorResponse.message || '';
+            } catch {
+                errorDetail = response.statusText;
+            }
+
+            // Log detalhado do erro
+            console.error('Erro na resposta:', {
+                status: response.status,
+                statusText: response.statusText,
+                url: fullUrl,
+                detail: errorDetail
+            });
+
+            // Tratamento específico para erros de autenticação
+            if (response.status === 401) {
+                console.log('Token inválido ou expirado, redirecionando para login');
+                localStorage.removeItem('authToken');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            throw new Error(`Erro na requisição: ${response.status} - ${errorDetail}`);
         }
 
-        return await response.json();
+        // Processamento da resposta
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            console.log('Dados recebidos:', {
+                url: fullUrl,
+                dataType: 'JSON',
+                dataSize: JSON.stringify(data).length
+            });
+            return data;
+        }
+
+        console.log('Resposta não-JSON recebida');
+        return response;
     } catch (error) {
-        console.error('Erro detalhado:', error);
+        console.error('Erro detalhado na requisição:', {
+            message: error.message,
+            stack: error.stack,
+            type: error.name
+        });
         throw error;
     }
 }
@@ -118,9 +183,28 @@ async function getExpensesPerMonth() {
     }
 }
 
+async function testarConexao() {
+    try {
+        // Teste de clientes
+        console.log('Testando rota de clientes...');
+        const clientes = await fetchWithAuth('api/clients');
+        console.log('Clientes recebidos:', clientes);
+
+        // Teste de despesas
+        console.log('Testando rota de despesas...');
+        const despesas = await fetchWithAuth('api/expenses');
+        console.log('Despesas recebidas:', despesas);
+    } catch (error) {
+        console.error('Erro no teste de conexão:', error);
+    }
+}
+
 
 // Adicione a verificação quando a página carregar
 document.addEventListener('DOMContentLoaded', async () => {
+
+    console.log('Iniciando testes de conexão...');
+    testarConexao();
     if (!checkAuth()) return;
     
     updateUserHeader();

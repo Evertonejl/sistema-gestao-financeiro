@@ -2,22 +2,34 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../db');
 
+// Middleware de log
+router.use((req, res, next) => {
+    console.log(`[Expenses] ${req.method} ${req.path} - Token:`, req.headers.authorization?.substring(0, 20) + '...');
+    next();
+});
+
 // Listar todas as despesas
 router.get('/', async (req, res) => {
     try {
+        console.log('[Expenses] Buscando todas as despesas');
         const expenses = await db.query(
             'SELECT * FROM expenses ORDER BY expenseDate DESC'
         );
+        console.log(`[Expenses] ${expenses.rows.length} despesas encontradas`);
         res.json(expenses.rows);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Erro ao buscar despesas' });
+        console.error('[Expenses] Erro ao buscar despesas:', err);
+        res.status(500).json({ 
+            message: 'Erro ao buscar despesas',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 });
 
 // Adicionar nova despesa
 router.post('/', async (req, res) => {
     try {
+        console.log('[Expenses] Tentando criar nova despesa:', req.body);
         const { expenseType, expenseDate, expenseValue } = req.body;
 
         const result = await db.query(
@@ -25,29 +37,11 @@ router.post('/', async (req, res) => {
             [expenseType, expenseDate, expenseValue]
         );
 
+        console.log('[Expenses] Despesa criada com sucesso:', result.rows[0]);
         res.status(201).json(result.rows[0]);
     } catch (err) {
-        console.error(err);
+        console.error('[Expenses] Erro ao criar despesa:', err);
         res.status(500).json({ message: 'Erro ao criar despesa' });
-    }
-});
-
-// Deletar despesa
-router.delete('/:id', async (req, res) => {
-    try {
-        const result = await db.query(
-            'DELETE FROM expenses WHERE id = $1 RETURNING *',
-            [req.params.id]
-        );
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: 'Despesa não encontrada' });
-        }
-
-        res.json({ message: 'Despesa deletada com sucesso' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Erro ao deletar despesa' });
     }
 });
 
