@@ -356,39 +356,31 @@ const expenseTableBody = document.getElementById("expenseTableBody");
 // Função para calcular e exibir totais
 async function displayTotals() {
     try {
-        const [clientsResponse, expensesResponse] = await Promise.all([
-            fetchWithAuth('http://localhost:3000/api/clients'),
-            fetchWithAuth('http://localhost:3000/api/expenses')
-        ]);
-
-        if (!clientsResponse || !expensesResponse) return;
-
-        const [clients, expenses] = await Promise.all([
-            clientsResponse.json(),
-            expensesResponse.json()
-        ]);
-
-        // Calcula o total de receitas considerando apenas o valor principal
+        const clients = await fetchWithAuth('/api/clients');
+        const expenses = await fetchWithAuth('/api/expenses');
+ 
+        // Calcula o total de receitas
         const totalRevenue = clients.reduce((acc, client) => {
-            // Pega apenas o valor principal (value)
             const mainValue = parseFloat(client.value) || 0;
             return acc + mainValue;
         }, 0);
-
+ 
+        // Calcula total de despesas
         const totalExpenses = expenses.reduce((acc, expense) => {
             const value = parseFloat(expense.expenseValue) || 0;
             return acc + value;
         }, 0);
-
+ 
         const profit = totalRevenue - totalExpenses;
-
+ 
+        // Atualiza elementos na UI
         const elements = {
             revenue: document.getElementById("totalRevenue"),
             expenses: document.getElementById("totalExpenses"),
             clientCount: document.getElementById("clientCount"),
             profit: document.getElementById("profit")
         };
-
+ 
         if (elements.revenue) {
             elements.revenue.textContent = `Total Entradas: R$ ${totalRevenue.toFixed(2)}`;
         }
@@ -402,8 +394,7 @@ async function displayTotals() {
             elements.profit.textContent = `Lucro R$ ${profit.toFixed(2)}`;
             elements.profit.className = profit >= 0 ? 'positive' : 'negative';
         }
-
-        // Log para debug
+ 
         console.log('Cálculo de totais:', {
             totalRevenue,
             totalExpenses,
@@ -417,49 +408,38 @@ async function displayTotals() {
     } catch (error) {
         console.error('Erro ao calcular totais:', error);
     }
-}
+ }
 
 // Função para calcular lucro
 async function calculateProfit() {
     try {
-        const [clientsResponse, expensesResponse] = await Promise.all([
-            fetchWithAuth('http://localhost:3000/api/clients'),
-            fetchWithAuth('http://localhost:3000/api/expenses')
-        ]);
-
-        if (!clientsResponse || !expensesResponse) return 0;
-
-        const [clients, expenses] = await Promise.all([
-            clientsResponse.json(),
-            expensesResponse.json()
-        ]);
-
-        // Calcula o total de receitas considerando apenas o valor principal
+        const clients = await fetchWithAuth('/api/clients');
+        const expenses = await fetchWithAuth('/api/expenses');
+ 
         const totalRevenue = clients.reduce((acc, client) => {
             const mainValue = parseFloat(client.value) || 0;
             return acc + mainValue;
         }, 0);
-
+ 
         const totalExpenses = expenses.reduce((acc, expense) => {
             const value = parseFloat(expense.expenseValue) || 0;
             return acc + value;
         }, 0);
-
+ 
         const profit = totalRevenue - totalExpenses;
-
+ 
         const profitElement = document.getElementById("profit");
         if (profitElement) {
             profitElement.textContent = `Lucro R$ ${profit.toFixed(2)}`;
             profitElement.className = profit >= 0 ? 'positive' : 'negative';
         }
-
+ 
         return profit;
     } catch (error) {
         console.error('Erro ao calcular lucro:', error);
         return 0;
     }
-}
-
+ }
 // Função para buscar clientes
 async function fetchClients() {
     try {
@@ -883,12 +863,8 @@ function addExpenseRowToTable(expense) {
 // Função para buscar todas as despesas
 async function fetchExpenses() {
     try {
-        const response = await fetchWithAuth('/api/expenses');
-        if (!response) return;
-        
-        const expenses = await response.json();
+        const expenses = await fetchWithAuth('/api/expenses');
         expenseTableBody.innerHTML = '';
-
         if (Array.isArray(expenses)) {
             expenses.forEach(expense => addExpenseRowToTable(expense));
         }
@@ -896,6 +872,7 @@ async function fetchExpenses() {
         console.error('Erro ao buscar despesas:', error);
     }
 }
+
 
 // Função para deletar despesa
 async function deleteExpenseRow(button) {
