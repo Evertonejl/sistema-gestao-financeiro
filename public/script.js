@@ -29,7 +29,6 @@ document.getElementById('logoutBtn').addEventListener('click', logout);
 // Função genérica para fazer requisições autenticadas
 async function fetchWithAuth(url, options = {}) {
     try {
-        // Verificação e log do token
         const token = getAuthToken();
         console.log('Token encontrado:', token ? 'Sim' : 'Não');
 
@@ -42,88 +41,37 @@ async function fetchWithAuth(url, options = {}) {
         // URL base do seu backend
         const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app';
         
-        // Limpeza e construção da URL
-        const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-        const fullUrl = `${baseURL}/${cleanUrl}`;
+        // Limpeza e construção da URL - CORREÇÃO AQUI
+        const cleanUrl = url.replace(/:[0-9]+$/, ''); // Remove qualquer :número do final
+        const fullUrl = `${baseURL}/api/${cleanUrl.replace(/^api\//, '')}`;
         
         console.log('Iniciando requisição para:', fullUrl);
-        console.log('Método:', options.method || 'GET');
 
-        // Configuração da requisição
-        const requestConfig = {
+        const response = await fetch(fullUrl, {
             ...options,
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
                 ...options.headers
             }
-        };
-
-        // Remove credentials se não for necessário
-        if (!url.includes('/auth')) {
-            delete requestConfig.credentials;
-        }
-
-        // Faz a requisição e monitora a resposta
-        const response = await fetch(fullUrl, requestConfig);
+        });
 
         // Log detalhado da resposta
         console.log('Resposta recebida:', {
             url: fullUrl,
             status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries())
+            statusText: response.statusText
         });
 
         if (!response.ok) {
-            // Tenta obter mais detalhes do erro
-            let errorDetail = '';
-            try {
-                const errorResponse = await response.json();
-                errorDetail = errorResponse.message || '';
-            } catch {
-                errorDetail = response.statusText;
-            }
-
-            // Log detalhado do erro
-            console.error('Erro na resposta:', {
-                status: response.status,
-                statusText: response.statusText,
-                url: fullUrl,
-                detail: errorDetail
-            });
-
-            // Tratamento específico para erros de autenticação
-            if (response.status === 401) {
-                console.log('Token inválido ou expirado, redirecionando para login');
-                localStorage.removeItem('authToken');
-                window.location.href = '/login.html';
-                return;
-            }
-
-            throw new Error(`Erro na requisição: ${response.status} - ${errorDetail}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        // Processamento da resposta
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            const data = await response.json();
-            console.log('Dados recebidos:', {
-                url: fullUrl,
-                dataType: 'JSON',
-                dataSize: JSON.stringify(data).length
-            });
-            return data;
-        }
-
-        console.log('Resposta não-JSON recebida');
-        return response;
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+        return data;
     } catch (error) {
-        console.error('Erro detalhado na requisição:', {
-            message: error.message,
-            stack: error.stack,
-            type: error.name
-        });
+        console.error('Erro na requisição:', error);
         throw error;
     }
 }
@@ -146,7 +94,7 @@ function updateUserHeader() {
  // Função para obter a quantidade de clientes cadastrados por mês
  async function getClientsPerMonth() {
     try {
-        const clients = await fetchWithAuth('/api/clients');
+        const clients = await fetchWithAuth('api/clients');
         const months = Array(12).fill(0);
         
         clients.forEach(client => {
@@ -165,7 +113,7 @@ function updateUserHeader() {
 
 async function getExpensesPerMonth() {
     try {
-        const expenses = await fetchWithAuth('/api/expenses');
+        const expenses = await fetchWithAuth('api/expenses');
         const months = Array(12).fill(0);
         
         expenses.forEach(expense => {
