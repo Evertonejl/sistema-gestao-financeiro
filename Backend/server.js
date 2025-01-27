@@ -7,7 +7,9 @@ const app = express();
 
 // Configuração do CORS
 app.use(cors({
-    origin: '*', // Depois você pode restringir para seu domínio específico
+    origin: '*', // Permite acesso de qualquer origem durante os testes
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
 
