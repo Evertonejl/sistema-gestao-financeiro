@@ -37,42 +37,34 @@ async function fetchWithAuth(url, options = {}) {
             return;
         }
 
-        // URL base do seu backend
-        const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app';
-        
-        // Remova /api/ da URL se já estiver presente
-        const cleanUrl = url.replace(/^\/?(api\/)?/, '');
+        // Remove barras finais e ajusta a URL base
+        const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app'.replace(/\/$/, '');
+        // Remove prefixo api/ se existir e limpa barras extras
+        const cleanUrl = url.replace(/^api\//, '').replace(/^\/+|\/+$/g, '');
         const fullUrl = `${baseURL}/api/${cleanUrl}`;
         
-        console.log('Iniciando requisição para:', fullUrl);
+        console.log('Fazendo requisição para:', fullUrl);
 
         const response = await fetch(fullUrl, {
             ...options,
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 ...options.headers
-            }
+            },
+            mode: 'cors'
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Erro na resposta:', {
-                url: fullUrl,
-                status: response.status,
-                statusText: response.statusText,
-                error: errorData
-            });
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('Dados recebidos:', data);
         return data;
     } catch (error) {
-        console.error('Erro detalhado na requisição:', {
-            message: error.message,
-            url: url
-        });
+        console.error('Erro na requisição:', error);
         throw error;
     }
 }
@@ -380,8 +372,10 @@ const expenseTableBody = document.getElementById("expenseTableBody");
 // Função para calcular e exibir totais
 async function displayTotals() {
     try {
-        const clients = await fetchWithAuth('clients');
-        const expenses = await fetchWithAuth('expenses');
+        const [clients, expenses] = await Promise.all([
+            fetchWithAuth('clients'),
+            fetchWithAuth('expenses')
+        ]);
  
         // Calcula o total de receitas
         const totalRevenue = clients.reduce((acc, client) => {
@@ -419,68 +413,80 @@ async function displayTotals() {
             elements.profit.className = profit >= 0 ? 'positive' : 'negative';
         }
  
-        console.log('Cálculo de totais:', {
-            totalRevenue,
-            totalExpenses,
-            profit,
-            clients: clients.map(c => ({
-                value: c.value,
-                hasSignal: c.hasSignal,
-                signalValue: c.signalValue
-            }))
-        });
+        return { totalRevenue, totalExpenses, profit };
     } catch (error) {
         console.error('Erro ao calcular totais:', error);
+        return { totalRevenue: 0, totalExpenses: 0, profit: 0 };
     }
- }
-
+}
 // Função para calcular lucro
 async function calculateProfit() {
     try {
         const clients = await fetchWithAuth('clients');
         const expenses = await fetchWithAuth('expenses');
- 
+
+        // Calcula o total de receitas
         const totalRevenue = clients.reduce((acc, client) => {
             const mainValue = parseFloat(client.value) || 0;
             return acc + mainValue;
         }, 0);
- 
+
+        // Calcula total de despesas
         const totalExpenses = expenses.reduce((acc, expense) => {
             const value = parseFloat(expense.expenseValue) || 0;
             return acc + value;
         }, 0);
- 
+
+        // Calcula o lucro
         const profit = totalRevenue - totalExpenses;
- 
+
+        // Atualiza o elemento do lucro na UI
         const profitElement = document.getElementById("profit");
         if (profitElement) {
             profitElement.textContent = `Lucro R$ ${profit.toFixed(2)}`;
             profitElement.className = profit >= 0 ? 'positive' : 'negative';
+
+            // Adiciona uma cor de fundo suave baseada no lucro
+            profitElement.style.backgroundColor = profit >= 0 ? 
+                'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)';
         }
- 
+
+        // Log para debug
+        console.log('Cálculo de lucro:', {
+            totalRevenue,
+            totalExpenses,
+            profit
+        });
+
         return profit;
     } catch (error) {
-        console.error('Erro ao calcular lucro:', error);
+        console.error('Erro ao calcular lucro:', {
+            error: error.message,
+            stack: error.stack
+        });
+        alert('Erro ao calcular lucro. Por favor, tente novamente.');
         return 0;
     }
- }
+}
 // Função para buscar clientes
 async function fetchClients() {
     try {
         console.log('Buscando clientes...');
-        const clients = await fetchWithAuth('clients'); // remova qualquer :1 ou número
+        const clients = await fetchWithAuth('clients');
         
         if (Array.isArray(clients)) {
-            console.error('Resposta inválida:', clients);
             tableBody.innerHTML = '';
             clients.forEach(client => addRowToTable(client));
-            document.getElementById('clientCount').textContent = `Total de clientes: ${clients.length}`;
+            if (document.getElementById('clientCount')) {
+                document.getElementById('clientCount').textContent = `Total de clientes: ${clients.length}`;
+            }
+        } else {
+            console.error('Resposta não é um array:', clients);
         }
     } catch (error) {
-        console.error('Erro detalhado ao buscar clientes:', error);
+        console.error('Erro ao buscar clientes:', error);
     }
 }
-
 
 // Função para adicionar linha à tabela de clientes
 function addRowToTable(client) {
@@ -526,13 +532,19 @@ function addRowToTable(client) {
 }
 // Função para deletar cliente
 async function deleteRow(button) {
-    const row = button.closest("tr");
-    const clientId = row.dataset.id;
-
     try {
+        const row = button.closest("tr");
+        const clientId = row.dataset.id;
+
+        if (!clientId) {
+            console.error('ID do cliente não encontrado');
+            return;
+        }
+
         await fetchWithAuth(`clients/${clientId}`, {
             method: 'DELETE'
         });
+
         row.remove();
         await Promise.all([
             fetchClients(),
@@ -544,6 +556,7 @@ async function deleteRow(button) {
         alert('Erro ao deletar cliente');
     }
 }
+
 
 
 
@@ -636,10 +649,7 @@ window.editRow = async function(button) {
 // Salvar cliente na API
 async function saveClientToAPI(data) {
     try {
-        console.log('Iniciando saveClientToAPI com dados:', data);
-
-        // Limpar a tabela antes de adicionar novo cliente
-        tableBody.innerHTML = '';
+        console.log('Iniciando salvamento do cliente:', data);
 
         const preparedData = {
             ...data,
@@ -648,31 +658,61 @@ async function saveClientToAPI(data) {
             signalValue: data.hasSignal === 'sim' ? parseFloat(data.signalValue).toFixed(2) : '0'
         };
 
-        const response = await fetchWithAuth('clients', {
+        await fetchWithAuth('clients', {
             method: 'POST',
             body: JSON.stringify(preparedData)
         });
 
-        if (!response) {
-            console.log('Resposta da API é nula');
-            return;
-        }
-
-        // Força uma atualização completa dos dados
+        // Atualiza os dados
         await Promise.all([
             fetchClients(),
-            fetchExpenses()
+            displayTotals(),
+            calculateProfit()
         ]);
 
-        // Recalcula os totais após ter os dados atualizados
-        await displayTotals();
-        await calculateProfit();
+        // Limpa o formulário e fecha o modal
+        const modal = document.getElementById("modal");
+        const dataForm = document.getElementById("dataForm");
+        if (modal) modal.style.display = "none";
+        if (dataForm) dataForm.reset();
 
-        modal.style.display = "none";
-        dataForm.reset();
     } catch (error) {
         console.error("Erro ao salvar cliente:", error);
         alert("Erro ao salvar cliente");
+    }
+}
+
+async function saveExpenseToAPI(data) {
+    try {
+        if (!data.expenseValue || parseFloat(data.expenseValue) <= 0) {
+            alert('Por favor, informe um valor válido para a despesa');
+            return;
+        }
+
+        const preparedData = {
+            ...data,
+            expenseValue: parseFloat(data.expenseValue).toFixed(2)
+        };
+
+        await fetchWithAuth('expenses', {
+            method: 'POST',
+            body: JSON.stringify(preparedData)
+        });
+
+        // Atualiza os dados
+        await Promise.all([
+            fetchExpenses(),
+            calculateProfit(),
+            displayTotals()
+        ]);
+
+        // Limpa o formulário e fecha o modal
+        if (expenseModal) expenseModal.style.display = "none";
+        if (expenseForm) expenseForm.reset();
+
+    } catch (error) {
+        console.error("Erro ao salvar despesa:", error);
+        alert("Erro ao salvar despesa");
     }
 }
 
@@ -863,46 +903,42 @@ function addExpenseRowToTable(expense) {
 async function fetchExpenses() {
     try {
         console.log('Buscando despesas...');
-        const expenses = await fetchWithAuth('expenses'); // remova qualquer :1 ou número
+        const expenses = await fetchWithAuth('expenses');
         
         if (Array.isArray(expenses)) {
             expenseTableBody.innerHTML = '';
             expenses.forEach(expense => addExpenseRowToTable(expense));
+        } else {
+            console.error('Resposta não é um array:', expenses);
         }
     } catch (error) {
         console.error('Erro ao buscar despesas:', error);
     }
 }
 
-
 // Função para deletar despesa
 async function deleteExpenseRow(button) {
-    const row = button.closest("tr");
-    const expenseId = row.dataset.id;
-
-    if (!expenseId) {
-        console.error('ID da despesa não encontrado');
-        return;
-    }
-
     try {
-        const response = await fetchWithAuth(`expenses/${expenseId}`, {
+        const row = button.closest("tr");
+        const expenseId = row.dataset.id;
+
+        if (!expenseId) {
+            console.error('ID da despesa não encontrado');
+            return;
+        }
+
+        await fetchWithAuth(`expenses/${expenseId}`, {
             method: 'DELETE'
         });
 
-        if (!response) return;
-
-        if (response.ok) {
-            row.remove();
-            await Promise.all([
-                calculateProfit(),
-                displayTotals()
-            ]);
-        } else {
-            throw new Error('Erro ao deletar despesa');
-        }
+        row.remove();
+        await Promise.all([
+            fetchExpenses(),
+            calculateProfit(),
+            displayTotals()
+        ]);
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('Erro ao deletar despesa:', error);
         alert('Erro ao deletar despesa');
     }
 }
