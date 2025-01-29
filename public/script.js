@@ -1,3 +1,13 @@
+// Adicione no início do seu script
+(function checkInitialAuth() {
+    const token = getAuthToken();
+    console.log('Token inicial:', {
+        exists: !!token,
+        value: token ? token.substring(0, 20) + '...' : 'none'
+    });
+})();
+
+
 // Função para obter o token de autenticação
 function getAuthToken() {
     return localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -31,19 +41,21 @@ async function fetchWithAuth(url, options = {}) {
     try {
         const token = getAuthToken();
         console.log('Token encontrado:', token ? 'Sim' : 'Não');
+        console.log('Token valor:', token?.substring(0, 20) + '...'); // Mostra parte do token por segurança
 
         if (!token) {
-            redirectToLogin();
+            window.location.href = '/login.html';
             return;
         }
 
-        const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app';
+        // Construa a URL corretamente - AQUI ESTÁ A PRINCIPAL MUDANÇA
+        const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app/api';
         const cleanUrl = url.replace(/^\/+|\/+$/g, '').replace(/^api\//, '');
-        const fullUrl = `${baseURL}/api/${cleanUrl}`;
+        const fullUrl = `${baseURL}/${cleanUrl}`;
         
-        console.log('Fazendo requisição para:', fullUrl);
+        console.log('Requisição para:', fullUrl);
 
-        const response = await fetch(fullUrl, {
+        const requestOptions = {
             ...options,
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -51,13 +63,21 @@ async function fetchWithAuth(url, options = {}) {
                 'Accept': 'application/json',
                 ...options.headers
             }
+        };
+
+        const response = await fetch(fullUrl, requestOptions);
+
+        // Log da resposta para debug
+        console.log('Resposta recebida:', {
+            url: fullUrl,
+            status: response.status,
+            ok: response.ok,
+            statusText: response.statusText
         });
 
-        // Tratamento específico para token expirado
         if (response.status === 401) {
-            console.log('Token expirado, redirecionando para login');
             clearAuthData();
-            redirectToLogin();
+            window.location.href = '/login.html';
             return;
         }
 
@@ -65,7 +85,8 @@ async function fetchWithAuth(url, options = {}) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        return await response.json();
+        const data = await response.json();
+        return data;
     } catch (error) {
         console.error('Erro na requisição:', error);
         throw error;
@@ -140,19 +161,30 @@ async function getExpensesPerMonth() {
     }
 }
 
-async function testarConexao() {
+async function testAPIConnections() {
     try {
-        // Teste de clientes
-        console.log('Testando rota de clientes...');
-        const clientes = await fetchWithAuth('clients');
-        console.log('Clientes recebidos:', clientes);
+        console.log('=== Iniciando testes de API ===');
+        
+        const token = getAuthToken();
+        console.log('Token atual:', token ? 'Presente' : 'Ausente');
 
-        // Teste de despesas
-        console.log('Testando rota de despesas...');
-        const despesas = await fetchWithAuth('expenses');
-        console.log('Despesas recebidas:', despesas);
+        // Teste de conexão básica
+        const testResponse = await fetch('https://sistema-gestao-financeiro-production.up.railway.app/api/health');
+        console.log('Teste de conexão:', testResponse.ok ? 'Sucesso' : 'Falha');
+
+        // Teste clientes
+        console.log('Testando API de clientes...');
+        const clientsResponse = await fetchWithAuth('clients');
+        console.log('Resposta clientes:', clientsResponse);
+
+        // Teste despesas
+        console.log('Testando API de despesas...');
+        const expensesResponse = await fetchWithAuth('expenses');
+        console.log('Resposta despesas:', expensesResponse);
+
+        console.log('=== Testes concluídos ===');
     } catch (error) {
-        console.error('Erro no teste de conexão:', error);
+        console.error('Erro nos testes:', error);
     }
 }
 
@@ -160,9 +192,10 @@ async function testarConexao() {
 // Adicione a verificação quando a página carregar
 document.addEventListener('DOMContentLoaded', async () => {
 
-    console.log('Iniciando testes de conexão...');
-    testarConexao();
+   
     if (!checkAuth()) return;
+    console.log('Iniciando testes de conexão...');
+    testAPIConnections()
     
     updateUserHeader();
    
@@ -1050,6 +1083,8 @@ function filterExpenseTable() {
         row.style.display = matchesType && matchesDate ? '' : 'none';
     });
 }
+
+
 
 // Adicionar listeners para os campos de filtro de despesas
 document.addEventListener('DOMContentLoaded', () => {
