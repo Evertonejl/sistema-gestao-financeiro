@@ -171,107 +171,134 @@
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-
+        
             // Limpar tokens antigos
             localStorage.removeItem('authToken');
             sessionStorage.removeItem('authToken');
-
+        
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const remember = document.getElementById('remember').checked;
             const errorMessage = document.getElementById('errorMessage');
-
+        
             try {
-                const response = await fetch('http://localhost:3000/api/auth/login', {
+                // Usar a URL do Railway em produção
+                const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app';
+                const response = await fetch(`${baseURL}/api/auth/login`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({ email, password })
                 });
-
+        
+                const data = await response.json();
+        
                 if (response.ok) {
-                    const data = await response.json();
-
-                    // Armazenar o token
+                    // Armazenar o token e dados do usuário
                     if (remember) {
                         localStorage.setItem('authToken', data.token);
-                        localStorage.setItem('userName', data.user.name); // Assumindo que a API retorna o nome do usuário
+                        localStorage.setItem('userName', data.user.name);
+                        localStorage.setItem('userId', data.user.id);
                     } else {
                         sessionStorage.setItem('authToken', data.token);
                         sessionStorage.setItem('userName', data.user.name);
+                        sessionStorage.setItem('userId', data.user.id);
                     }
-
-                    // Mostrar mensagem de boas-vindas antes do redirecionamento
+        
+                    // Log para debug
+                    console.log('Login bem-sucedido:', {
+                        token: data.token ? 'Token presente' : 'Token ausente',
+                        userName: data.user.name,
+                        userId: data.user.id
+                    });
+        
+                    // Mostrar mensagem de boas-vindas
                     showWelcomeMessage(data.user.name);
-
-                    // Pequeno delay para a mensagem ser vista antes do redirecionamento
+        
+                    // Redirecionar após delay
                     setTimeout(() => {
                         window.location.href = 'index.html';
-                    }, 1500); // 1.5 segundos de delay
-
+                    }, 1500);
+        
                 } else {
-                    throw new Error('Credenciais inválidas');
+                    console.error('Erro no login:', data);
+                    throw new Error(data.message || 'Erro ao fazer login');
                 }
             } catch (error) {
+                console.error('Erro detalhado:', error);
+                errorMessage.textContent = error.message || 'Credenciais inválidas';
                 errorMessage.style.display = 'block';
-                document.querySelector('.login-container').classList.add('shake');
-
-                setTimeout(() => {
-                    document.querySelector('.login-container').classList.remove('shake');
-                }, 500);
+                
+                // Efeito de shake
+                const container = document.querySelector('.login-container');
+                container.classList.add('shake');
+                setTimeout(() => container.classList.remove('shake'), 500);
             }
-
         });
-
         
-function showWelcomeMessage(userName) {
-    // Criar o elemento de mensagem se não existir
-    let messageElement = document.getElementById('welcome-message');
-    if (!messageElement) {
-        messageElement = document.createElement('div');
-        messageElement.id = 'welcome-message';
-        document.body.insertBefore(messageElement, document.body.firstChild);
-    }
-
-    // Aplicar estilos
-    messageElement.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #4CAF50;
-        color: white;
-        padding: 15px 30px;
-        border-radius: 5px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        z-index: 1000;
-        animation: slideDown 0.5s ease-out;
-    `;
-
-    // Adicionar o CSS da animação se ainda não existir
-    if (!document.getElementById('welcome-animation')) {
-        const style = document.createElement('style');
-        style.id = 'welcome-animation';
-        style.textContent = `
-            @keyframes slideDown {
-                from {
-                    transform: translate(-50%, -100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translate(-50%, 0);
-                    opacity: 1;
-                }
+        function showWelcomeMessage(userName) {
+            // Criar elemento de mensagem
+            let messageElement = document.getElementById('welcome-message');
+            if (!messageElement) {
+                messageElement = document.createElement('div');
+                messageElement.id = 'welcome-message';
+                document.body.insertBefore(messageElement, document.body.firstChild);
             }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // Definir a mensagem
-    messageElement.textContent = `Bem vindo, ${userName}!`;
-}
-    </script>
+        
+            // Estilos da mensagem
+            messageElement.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #4CAF50;
+                color: white;
+                padding: 15px 30px;
+                border-radius: 5px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                z-index: 1000;
+                animation: slideDown 0.5s ease-out;
+                font-weight: bold;
+            `;
+        
+            // Adicionar animação
+            if (!document.getElementById('welcome-animation')) {
+                const style = document.createElement('style');
+                style.id = 'welcome-animation';
+                style.textContent = `
+                    @keyframes slideDown {
+                        from {
+                            transform: translate(-50%, -100%);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translate(-50%, 0);
+                            opacity: 1;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        
+            // Definir mensagem
+            messageElement.textContent = `Bem vindo, ${userName}!`;
+        
+            // Remover mensagem após 3 segundos
+            setTimeout(() => {
+                messageElement.style.animation = 'slideUp 0.5s ease-out forwards';
+            }, 3000);
+        }
+        
+        // Verificar token existente ao carregar a página
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            if (token) {
+                window.location.href = 'index.html';
+            }
+        });
+        </script>
 </body>
 
 </html>

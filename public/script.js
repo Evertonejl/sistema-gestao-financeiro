@@ -33,14 +33,12 @@ async function fetchWithAuth(url, options = {}) {
         console.log('Token encontrado:', token ? 'Sim' : 'Não');
 
         if (!token) {
-            window.location.href = '/login.html';
+            redirectToLogin();
             return;
         }
 
-        // Remove barras finais e ajusta a URL base
-        const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app'.replace(/\/$/, '');
-        // Remove prefixo api/ se existir e limpa barras extras
-        const cleanUrl = url.replace(/^api\//, '').replace(/^\/+|\/+$/g, '');
+        const baseURL = 'https://sistema-gestao-financeiro-production.up.railway.app';
+        const cleanUrl = url.replace(/^\/+|\/+$/g, '').replace(/^api\//, '');
         const fullUrl = `${baseURL}/api/${cleanUrl}`;
         
         console.log('Fazendo requisição para:', fullUrl);
@@ -52,22 +50,40 @@ async function fetchWithAuth(url, options = {}) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 ...options.headers
-            },
-            mode: 'cors'
+            }
         });
+
+        // Tratamento específico para token expirado
+        if (response.status === 401) {
+            console.log('Token expirado, redirecionando para login');
+            clearAuthData();
+            redirectToLogin();
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
-        console.log('Dados recebidos:', data);
-        return data;
+        return await response.json();
     } catch (error) {
         console.error('Erro na requisição:', error);
         throw error;
     }
 }
+
+// Funções auxiliares
+function clearAuthData() {
+    localStorage.removeItem('authToken');
+    sessionStorage.removeItem('authToken');
+    localStorage.removeItem('userName');
+    sessionStorage.removeItem('userName');
+}
+
+function redirectToLogin() {
+    window.location.href = '/login.html';
+}
+
 // Função para atualizar o nome do usuário no header
 function updateUserHeader() {
     const userNameElement = document.getElementById('userName');
