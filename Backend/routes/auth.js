@@ -48,55 +48,42 @@ router.post('/register', async (req, res) => {
 
 // Rota de login
 router.post('/login', async (req, res) => {
-   try {
-       const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
+        console.log('Tentativa de login:', { email });
 
-       const user = await db.get(
-           'SELECT * FROM users WHERE email = $1',
-           [email]
-       );
+        const user = await db.get(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
+        );
 
-       if (!user) {
-           return res.status(401).json({ message: 'Credenciais inválidas' });
-       }
+        if (!user) {
+            return res.status(401).json({ message: 'Credenciais inválidas' });
+        }
 
-       const validPassword = await bcrypt.compare(password, user.password);
-       if (!validPassword) {
-           return res.status(401).json({ message: 'Credenciais inválidas' });
-       }
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(401).json({ message: 'Credenciais inválidas' });
+        }
 
-       // Gerar token com tempo de expiração
-       const token = jwt.sign(
-           { 
-               userId: user.id,
-               email: user.email 
-           },
-           process.env.JWT_SECRET,
-           { 
-               expiresIn: '24h', // Token válido por 24 horas
-               algorithm: 'HS256'
-           }
-       );
+        const token = jwt.sign(
+            { userId: user.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
 
-       // Log do token gerado
-       console.log('Token gerado para usuário:', {
-           userId: user.id,
-           email: user.email,
-           tokenExpiration: '24h'
-       });
-
-       res.json({ 
-           token, 
-           user: { 
-               id: user.id, 
-               email: user.email, 
-               name: user.name 
-           }
-       });
-   } catch (err) {
-       console.error('Erro no login:', err);
-       res.status(500).json({ message: 'Erro ao fazer login' });
-   }
+        res.json({ 
+            token, 
+            user: { 
+                id: user.id, 
+                email: user.email, 
+                name: user.name 
+            } 
+        });
+    } catch (err) {
+        console.error('Erro no login:', err);
+        res.status(500).json({ message: 'Erro ao fazer login' });
+    }
 });
 
 // Rota para renovar token
